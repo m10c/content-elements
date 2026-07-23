@@ -1,6 +1,6 @@
 {
   "name": "@m10c/content-elements",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "CMS content elements bundle (block editor, SEO, variants)",
   "license": "MIT",
   "repository": {
