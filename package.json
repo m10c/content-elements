@@ -1,0 +1,82 @@
+{
+  "name": "@m10c/content-elements",
+  "version": "0.0.1",
+  "description": "CMS content elements bundle (block editor, SEO, variants)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m10c/content-elements.git"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepare": "tsup",
+    "ts": "tsc --noEmit",
+    "lint": "eslint src/",
+    "pretty": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "pretty:check": "prettier --check \"src/**/*.{ts,tsx}\""
+  },
+  "peerDependencies": {
+    "@mui/icons-material": ">=5.0.0",
+    "@mui/material": ">=5.0.0",
+    "date-fns": ">=2.0.0",
+    "@m10c/mui-kit": "*",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "react-typed-form": ">=0.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@mui/material": {
+      "optional": true
+    },
+    "@mui/icons-material": {
+      "optional": true
+    },
+    "react-typed-form": {
+      "optional": true
+    },
+    "date-fns": {
+      "optional": true
+    },
+    "@m10c/mui-kit": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@emotion/react": "^11.0.0",
+    "@emotion/styled": "^11.0.0",
+    "@eslint/js": "^9",
+    "@mui/icons-material": "^6.4.7",
+    "@mui/material": "^6.4.7",
+    "@types/react": "18",
+    "@types/react-dom": "18",
+    "date-fns": "^2.30.0",
+    "eslint": "^9",
+    "eslint-config-prettier": "^9",
+    "eslint-plugin-react-hooks": "^5",
+    "@m10c/mui-kit": "^0.0.1",
+    "prettier": "^3.5.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-typed-form": "0.3.6",
+    "tsup": "^8.4.0",
+    "typescript": "~5.7.2",
+    "typescript-eslint": "^8"
+  },
+  "files": [
+    "dist"
+  ]
+}
