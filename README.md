@@ -45,16 +45,18 @@ Fetch the page on the server, pass it to `useWebsitePageData` as `initialData`,
 and render the blocks it returns:
 
 ```typescript
-import { useWebsitePageData, type Block } from '@m10c/content-elements';
+import { useWebsitePageData } from '@m10c/content-elements/hooks';
 
 const { data } = useWebsitePageData({ path: 'about', initialData });
-const blocks = data.blocks as Block[];
 // render each block by its type…
 ```
 
 `useWebsitePageData` returns the server-fetched content for the live page, and
 transparently swaps in preview content when the page is open inside the editor
 (see below).
+
+For site-wide content like a footer, `useWebsiteGlobalData` works
+the same way but reads a global by its CMS path (e.g. `'footer'`).
 
 ## Live preview
 

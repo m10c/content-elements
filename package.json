@@ -18,6 +18,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./hooks": {
+      "types": "./dist/hooks.d.ts",
+      "import": "./dist/hooks.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "hooks": [
+        "./dist/hooks.d.ts"
+      ]
     }
   },
   "scripts": {
