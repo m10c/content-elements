@@ -15,10 +15,11 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  InputAdornment,
   Stack,
   Typography,
 } from '@mui/material';
-import { FieldText } from '@m10c/mui-kit';
+import { FieldRadioGroup, FieldText } from '@m10c/mui-kit';
 import React from 'react';
 import { FieldProp } from 'react-typed-form';
 
@@ -232,7 +233,7 @@ type SimpleFieldRendererProps = {
   renderers?: BlockFieldRenderers;
   /** Overrides the rendered label (used to suffix a list item's index). */
   labelOverride?: string;
-  onChange: (value: string | null) => void;
+  onChange: (value: unknown) => void;
 };
 
 function SimpleFieldRenderer({
@@ -243,8 +244,13 @@ function SimpleFieldRenderer({
   labelOverride,
   onChange,
 }: SimpleFieldRendererProps) {
-  const stringValue = typeof value === 'string' ? value : null;
   const label = labelOverride ?? fieldLabel(fieldDef, fieldKey);
+
+  if (fieldDef.kind === 'note') {
+    return <FieldNote fieldDef={fieldDef} label={label} />;
+  }
+
+  const stringValue = typeof value === 'string' ? value : null;
 
   const customRenderer: BlockFieldRenderer | undefined =
     renderers?.[fieldDef.kind];
@@ -256,10 +262,37 @@ function SimpleFieldRenderer({
           label,
           value: stringValue,
           features: fieldDef.features,
+          hint: fieldDef.hint,
+          prefix: fieldDef.prefix,
+          values: stringValues(value),
+          maxItems: fieldDef.maxItems,
           onChange,
+          onChangeValues: onChange,
         })}
       </>
     );
+  }
+
+  if (fieldDef.kind === 'choice') {
+    return (
+      <FieldWrap fieldDef={fieldDef} label={label}>
+        <FieldRadioGroup
+          field={{
+            name: fieldKey,
+            label,
+            value: stringValue ?? '',
+            handleValueChange: onChange,
+          }}
+          options={fieldDef.options ?? []}
+        />
+      </FieldWrap>
+    );
+  }
+
+  // Uploading belongs to the consuming app, so an images field draws nothing
+  // of its own until a renderer is given for it.
+  if (fieldDef.kind === 'images') {
+    return <FieldWrap fieldDef={fieldDef} label={label} />;
   }
 
   const fieldProp: FieldProp<string | null> = {
@@ -275,24 +308,88 @@ function SimpleFieldRenderer({
     fieldDef.kind === 'richtext';
 
   return (
-    <Stack spacing={1}>
-      <Typography variant="subtitle2">{label}</Typography>
+    <FieldWrap fieldDef={fieldDef} label={label}>
       <FieldText
         field={fieldProp}
         hiddenLabel
         multiline={multiline}
         minRows={multiline ? 2 : undefined}
+        InputProps={
+          fieldDef.prefix
+            ? {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    {fieldDef.prefix}
+                  </InputAdornment>
+                ),
+              }
+            : undefined
+        }
         inputProps={
           fieldDef.maxLength ? { maxLength: fieldDef.maxLength } : undefined
         }
       />
+    </FieldWrap>
+  );
+}
+
+type FieldWrapProps = {
+  fieldDef: SimpleField;
+  label: string;
+  children?: React.ReactNode;
+};
+
+/** A field's label and hint, above whatever draws its value. */
+function FieldWrap({ fieldDef, label, children }: FieldWrapProps) {
+  return (
+    <Stack spacing={1}>
+      <Stack spacing={0.5}>
+        <Typography variant="subtitle2">{label}</Typography>
+        {fieldDef.hint && (
+          <Typography variant="body2" color="text.secondary">
+            {fieldDef.hint}
+          </Typography>
+        )}
+      </Stack>
+      {children}
     </Stack>
   );
+}
+
+/** Names a part of the page an admin cannot edit, e.g. a contact form. */
+function FieldNote({
+  fieldDef,
+  label,
+}: {
+  fieldDef: SimpleField;
+  label: string;
+}) {
+  return (
+    <Stack spacing={0.5}>
+      {fieldDef.label && <Typography variant="subtitle1">{label}</Typography>}
+      <Typography variant="body2" color="text.secondary">
+        {fieldDef.text}
+      </Typography>
+    </Stack>
+  );
+}
+
+/** The strings held by a field with several values, e.g. uploaded images. */
+function stringValues(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
 }
 
 /** A field's label, marked with an asterisk when it is required. */
 function fieldLabel(fieldDef: BlockTypeField, fallback: string) {
   return `${fieldDef.label ?? fallback}${fieldDef.required ? '*' : ''}`;
+}
+
+/** What a saved value reads as, naming the choice it stands for. */
+function optionLabel(fieldDef: SimpleField, value: string | null) {
+  const option = fieldDef.options?.find((item) => item.value === value);
+  return option?.label ?? value;
 }
 
 type ListItem = Record<string, unknown>;
@@ -540,17 +637,25 @@ function ListItemCard({
       </Box>
       <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
         {Object.entries(fieldDef.itemFields).map(([subKey, subFieldDef]) => {
+          const label = fieldLabel(subFieldDef, subKey);
+          if (subFieldDef.kind === 'note') {
+            return (
+              <FieldNote key={subKey} fieldDef={subFieldDef} label={label} />
+            );
+          }
           const value = typeof item[subKey] === 'string' ? item[subKey] : null;
           const preview = previews?.[subFieldDef.kind];
           return (
             <Stack key={subKey} spacing={0.5}>
               <Typography variant="body2" color="text.secondary">
-                {fieldLabel(subFieldDef, subKey)}
+                {label}
               </Typography>
               {preview ? (
                 preview(value)
               ) : (
-                <Typography variant="body1">{value}</Typography>
+                <Typography variant="body1">
+                  {optionLabel(subFieldDef, value)}
+                </Typography>
               )}
             </Stack>
           );

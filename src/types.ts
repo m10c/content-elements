@@ -1,5 +1,17 @@
 export type SimpleFieldKind =
-  'text' | 'textarea' | 'richtext' | 'markdown' | 'image';
+  | 'text'
+  | 'textarea'
+  | 'richtext'
+  | 'markdown'
+  | 'image'
+  | 'images'
+  | 'choice'
+  | 'note';
+
+export type FieldOption = {
+  value: string;
+  label: string;
+};
 
 export type SimpleField = {
   kind: SimpleFieldKind;
@@ -9,6 +21,16 @@ export type SimpleField = {
   maxLength?: number;
   /** Markdown feature flags, e.g. ['bold', 'italic', 'lists', 'links'] */
   features?: string[];
+  /** Guidance under the label, e.g. the dimensions an image should have. */
+  hint?: string;
+  /** Fixed text before the input, e.g. a currency symbol. */
+  prefix?: string;
+  /** What a `note` field says in place of an input. */
+  text?: string;
+  /** What a `choice` field offers. */
+  options?: FieldOption[];
+  /** Caps how many an `images` field holds. */
+  maxItems?: number;
 };
 
 export type ListField = {
@@ -73,7 +95,17 @@ export type BlockFieldRendererProps = {
   value: string | null;
   /** The formats the field's schema allows, e.g. ['bold', 'link']. */
   features?: string[];
+  /** Guidance under the label, e.g. the dimensions an image should have. */
+  hint?: string;
+  /** Fixed text before the input, e.g. a currency symbol. */
+  prefix?: string;
+  /** The saved values of a field that holds several, e.g. `images`. */
+  values?: string[];
+  /** Caps how many values a field that holds several accepts. */
+  maxItems?: number;
   onChange: (value: string | null) => void;
+  /** Replaces the values of a field that holds several. */
+  onChangeValues?: (values: string[]) => void;
 };
 
 export type BlockFieldRenderer = (
