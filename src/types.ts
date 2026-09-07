@@ -4,6 +4,8 @@ export type SimpleFieldKind =
 export type SimpleField = {
   kind: SimpleFieldKind;
   label?: string;
+  /** Marks the label with an asterisk. */
+  required?: boolean;
   maxLength?: number;
   /** Markdown feature flags, e.g. ['bold', 'italic', 'lists', 'links'] */
   features?: string[];
@@ -12,9 +14,28 @@ export type SimpleField = {
 export type ListField = {
   kind: 'list';
   label?: string;
+  /** Marks the label with an asterisk. */
+  required?: boolean;
   itemLabel?: string;
   minItems?: number;
   maxItems?: number;
+  /**
+   * `inline` lists every item's fields one after another, and items can only be
+   * edited. `cards` shows each item as a summary card that opens a dialog to
+   * edit, and lets an admin add and delete items.
+   */
+  variant?: 'inline' | 'cards';
+  /**
+   * Sibling fields of the same block to render under this list's heading, e.g.
+   * a subtitle that introduces the items. They are skipped where they would
+   * otherwise appear in the block.
+   */
+  headerFieldKeys?: string[];
+  /**
+   * Placeholders an admin can type into this list's fields, listed at the top
+   * of the dialog that edits an item.
+   */
+  variables?: { token: string; description: string }[];
   itemFields: Record<string, SimpleField>;
 };
 
@@ -23,6 +44,8 @@ export type BlockTypeField = SimpleField | ListField;
 export type BlockType = {
   key: string;
   label: string;
+  /** Hides the block's heading, for a block whose single field is titled. */
+  hideLabel?: boolean;
   fields: Record<string, BlockTypeField>;
 };
 
@@ -57,4 +80,14 @@ export type BlockFieldRenderer = (
 
 export type BlockFieldRenderers = Partial<
   Record<SimpleFieldKind | string, BlockFieldRenderer>
+>;
+
+/**
+ * Draws a field's saved value inside a card summary, e.g. the icon a slug
+ * names. Without one the value is shown as text.
+ */
+export type BlockFieldPreview = (value: string | null) => React.ReactNode;
+
+export type BlockFieldPreviews = Partial<
+  Record<SimpleFieldKind | string, BlockFieldPreview>
 >;

@@ -18,10 +18,21 @@ import React from 'react';
 import { FieldProp } from 'react-typed-form';
 
 import usePreviewSender from '../hooks/use-preview-sender';
-import BlocksField from './BlocksField';
-import type { Block, BlockFieldRenderers, BlockTypeInput } from '../types';
+import BlocksField, { type ListCardIcons } from './BlocksField';
+import type {
+  Block,
+  BlockFieldPreviews,
+  BlockFieldRenderers,
+  BlockTypeInput,
+} from '../types';
 
 type PreviewWidth = 'desktop' | 'tablet' | 'mobile';
+
+const DEVICE_LABELS: Record<PreviewWidth, string> = {
+  desktop: 'Desktop',
+  tablet: 'Tablet',
+  mobile: 'Mobile',
+};
 
 const PREVIEW_WIDTHS = {
   desktop: 1280,
@@ -36,6 +47,10 @@ type Props = {
   blockTypes: readonly BlockTypeInput[];
   field: FieldProp<Block[]>;
   renderers?: BlockFieldRenderers;
+  previews?: BlockFieldPreviews;
+  icons?: ListCardIcons;
+  /** Names for the preview's device sizes, e.g. 'Mobile website'. */
+  deviceLabels?: Partial<Record<PreviewWidth, string>>;
   /** Site origin for the preview iframe and postMessage target. */
   previewUrl: string;
   pagePath: string;
@@ -50,6 +65,9 @@ export default function PageEditor({
   blockTypes,
   field,
   renderers,
+  previews,
+  icons,
+  deviceLabels,
   previewUrl,
   pagePath,
   previewContent,
@@ -105,6 +123,8 @@ export default function PageEditor({
             blockTypes={blockTypes}
             field={field}
             renderers={renderers}
+            previews={previews}
+            icons={icons}
           />
         </Box>
 
@@ -134,9 +154,13 @@ export default function PageEditor({
                   IconComponent={KeyboardArrowDown}
                   sx={{ bgcolor: 'background.paper' }}
                 >
-                  <MenuItem value="desktop">Desktop</MenuItem>
-                  <MenuItem value="tablet">Tablet</MenuItem>
-                  <MenuItem value="mobile">Mobile</MenuItem>
+                  {(Object.keys(DEVICE_LABELS) as PreviewWidth[]).map(
+                    (device) => (
+                      <MenuItem key={device} value={device}>
+                        {deviceLabels?.[device] ?? DEVICE_LABELS[device]}
+                      </MenuItem>
+                    ),
+                  )}
                 </Select>
               </FormControl>
             </Stack>
