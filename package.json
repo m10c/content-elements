@@ -78,7 +78,7 @@
     "eslint": "^9",
     "eslint-config-prettier": "^9",
     "eslint-plugin-react-hooks": "^5",
-    "@m10c/mui-kit": "^0.0.1",
+    "@m10c/mui-kit": "^0.0.2",
     "prettier": "^3.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

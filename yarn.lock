@@ -449,10 +449,10 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@m10c/mui-kit@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@m10c/mui-kit/-/mui-kit-0.0.1.tgz#fe00038afc166a644b323fc283e08b4a9b462d56"
-  integrity sha512-ZZmGsH6cdyfjbtA4GlicZ8gn3PqzFow2GaRCXIz5U0xXRdAJWmIjFFFIV+/Iyka0TGFmRq3oNSAcQNjA5c4VUA==
+"@m10c/mui-kit@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@m10c/mui-kit/-/mui-kit-0.0.2.tgz#0233d1d3e0cdbc1071ede9ed581d059e48a7dfbf"
+  integrity sha512-9rmyymyqOQ+7UO4di5RqfDE2Bec04W7Id9tM/Ox+vY8ZK778hEwMcZwoK5/kvueOaxUzmlCm96tMGcmi4edvTQ==
   dependencies:
     "@phosphor-icons/react" "^2.1.7"
 
