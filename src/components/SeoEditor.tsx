@@ -15,6 +15,8 @@ type Props = {
   imageField?: FieldProp<string | null>;
   renderImageField?: (field: FieldProp<string | null>) => React.ReactNode;
   imagePreviewUrl?: string;
+  /** The image the site shares when a page names none of its own. */
+  fallbackImageUrl?: string;
   /** The site's favicon, shown next to the URL in the search preview (search
    * engines use the favicon here, not the social/OG image). */
   faviconUrl?: string;
@@ -58,6 +60,7 @@ export default function SeoEditor({
   imageField,
   renderImageField,
   imagePreviewUrl,
+  fallbackImageUrl,
   faviconUrl,
   fallbackTitle,
   siteName = '',
@@ -66,6 +69,7 @@ export default function SeoEditor({
 }: Props) {
   const pageTitle = pageTitleField.value ?? '';
   const description = descriptionField.value ?? '';
+  const socialImageUrl = imagePreviewUrl ?? fallbackImageUrl;
 
   return (
     <Box
@@ -219,8 +223,8 @@ export default function SeoEditor({
                   sx={{
                     height: 260,
                     bgcolor: 'grey.300',
-                    backgroundImage: imagePreviewUrl
-                      ? `url(${imagePreviewUrl})`
+                    backgroundImage: socialImageUrl
+                      ? `url(${socialImageUrl})`
                       : undefined,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
