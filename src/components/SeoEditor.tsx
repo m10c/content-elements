@@ -5,9 +5,13 @@ import { FieldText } from '@m10c/mui-kit';
 import type React from 'react';
 import type { FieldProp } from 'react-typed-form';
 
+import type { BlockFieldRenderers } from '../types';
+
 type Props = {
   pageTitleField: FieldProp<string | null>;
   descriptionField: FieldProp<string | null>;
+  /** Draws the text fields, for an app whose inputs look nothing like these. */
+  renderers?: BlockFieldRenderers;
   imageField?: FieldProp<string | null>;
   renderImageField?: (field: FieldProp<string | null>) => React.ReactNode;
   imagePreviewUrl?: string;
@@ -50,6 +54,7 @@ function CharacterCount({
 export default function SeoEditor({
   pageTitleField,
   descriptionField,
+  renderers,
   imageField,
   renderImageField,
   imagePreviewUrl,
@@ -78,25 +83,47 @@ export default function SeoEditor({
         <Stack direction="row" sx={{ gap: '56px', justifyContent: 'center' }}>
           <Stack sx={{ width: 571 }} spacing={3}>
             <Stack spacing={1}>
-              <Typography variant="subtitle2">Page Title</Typography>
-              <FieldText
-                field={pageTitleField}
-                hiddenLabel
-                size="small"
-                fullWidth
-              />
+              {renderers?.text ? (
+                renderers.text({
+                  name: 'pageTitle',
+                  label: 'Page Title',
+                  value: pageTitleField.value ?? null,
+                  onChange: pageTitleField.handleValueChange,
+                })
+              ) : (
+                <>
+                  <Typography variant="subtitle2">Page Title</Typography>
+                  <FieldText
+                    field={pageTitleField}
+                    hiddenLabel
+                    size="small"
+                    fullWidth
+                  />
+                </>
+              )}
               <CharacterCount value={pageTitle} min={45} max={60} />
             </Stack>
             <Stack spacing={1}>
-              <Typography variant="subtitle2">Description</Typography>
-              <FieldText
-                field={descriptionField}
-                hiddenLabel
-                size="small"
-                fullWidth
-                multiline
-                rows={4}
-              />
+              {renderers?.textarea ? (
+                renderers.textarea({
+                  name: 'description',
+                  label: 'Description',
+                  value: descriptionField.value ?? null,
+                  onChange: descriptionField.handleValueChange,
+                })
+              ) : (
+                <>
+                  <Typography variant="subtitle2">Description</Typography>
+                  <FieldText
+                    field={descriptionField}
+                    hiddenLabel
+                    size="small"
+                    fullWidth
+                    multiline
+                    rows={4}
+                  />
+                </>
+              )}
               <CharacterCount value={description} min={100} max={150} />
             </Stack>
             {imageField && renderImageField && renderImageField(imageField)}

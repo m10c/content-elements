@@ -71,6 +71,8 @@ export type BlockFieldRendererProps = {
   name: string;
   label: string;
   value: string | null;
+  /** The formats the field's schema allows, e.g. ['bold', 'link']. */
+  features?: string[];
   onChange: (value: string | null) => void;
 };
 

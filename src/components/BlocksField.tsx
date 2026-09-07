@@ -255,6 +255,7 @@ function SimpleFieldRenderer({
           name: fieldKey,
           label,
           value: stringValue,
+          features: fieldDef.features,
           onChange,
         })}
       </>
@@ -379,6 +380,8 @@ function ListCards({
   const { maxItems, minItems } = fieldDef;
   const isFull = maxItems !== undefined && items.length >= maxItems;
   const canDelete = items.length > (minItems ?? 0);
+  // A list whose length is fixed has nothing to add or count.
+  const isFixedLength = minItems !== undefined && minItems === maxItems;
 
   function replaceItem(index: number, next: ListItem) {
     const updated = items.slice();
@@ -400,21 +403,27 @@ function ListCards({
 
   return (
     <Stack spacing={1.5}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="subtitle1">
-          {fieldLabel(fieldDef, itemLabel)}
-        </Typography>
-        <Button
-          size="small"
-          startIcon={<AddIcon />}
-          disabled={isFull}
-          onClick={() => setIsAdding(true)}
+      {!isFixedLength && (
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
         >
-          Add
-        </Button>
-      </Stack>
+          <Typography variant="subtitle1">
+            {fieldLabel(fieldDef, itemLabel)}
+          </Typography>
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            disabled={isFull}
+            onClick={() => setIsAdding(true)}
+          >
+            Add
+          </Button>
+        </Stack>
+      )}
 
-      {maxItems !== undefined && (
+      {maxItems !== undefined && !isFixedLength && (
         <Typography variant="body2" color="text.secondary">
           {items.length} of {maxItems} {itemLabel}(s) added. You can add up to{' '}
           {maxItems} {itemLabel}s.
