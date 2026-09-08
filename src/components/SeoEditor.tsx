@@ -26,6 +26,12 @@ type Props = {
   onPublish: () => void;
 };
 
+/** Diameter of the circle search engines draw the favicon inside. */
+const FAVICON_CHIP_SIZE = 26;
+
+/** The favicon itself, inset so it stays within the circle. */
+const FAVICON_SIZE = 20;
+
 function CharacterCount({
   value,
   min,
@@ -149,15 +155,15 @@ export default function SeoEditor({
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Box
                       sx={{
-                        width: 20,
-                        height: 22,
-                        borderRadius: '4px',
-                        bgcolor: 'grey.300',
+                        width: FAVICON_CHIP_SIZE,
+                        height: FAVICON_CHIP_SIZE,
+                        borderRadius: '50%',
+                        bgcolor: 'grey.200',
                         flexShrink: 0,
                         backgroundImage: faviconUrl
                           ? `url(${faviconUrl})`
                           : undefined,
-                        backgroundSize: 'contain',
+                        backgroundSize: FAVICON_SIZE,
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
                       }}
