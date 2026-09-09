@@ -54,6 +54,8 @@ type Props = {
   /** Site origin for the preview iframe and postMessage target. */
   previewUrl: string;
   pagePath: string;
+  /** The site's route for the page, where it differs from the CMS path. */
+  previewPath?: string;
   previewContent: Record<string, unknown>;
   /** CMS paths that are global pages (footer, navigation, …). */
   globalPagePaths?: readonly string[];
@@ -70,6 +72,7 @@ export default function PageEditor({
   deviceLabels,
   previewUrl,
   pagePath,
+  previewPath,
   previewContent,
   globalPagePaths = [],
   isSaving,
@@ -80,7 +83,7 @@ export default function PageEditor({
     React.useState<PreviewWidth>('desktop');
 
   const isGlobal = globalPagePaths.includes(pagePath);
-  const routePath = isGlobal ? GLOBAL_PREVIEW_PATH : pagePath;
+  const routePath = isGlobal ? GLOBAL_PREVIEW_PATH : (previewPath ?? pagePath);
 
   const { iframeRef } = usePreviewSender({
     previewUrl,
