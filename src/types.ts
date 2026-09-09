@@ -6,6 +6,7 @@ export type SimpleFieldKind =
   | 'image'
   | 'images'
   | 'choice'
+  | 'toggle'
   | 'note';
 
 export type FieldOption = {
@@ -103,9 +104,13 @@ export type BlockFieldRendererProps = {
   values?: string[];
   /** Caps how many values a field that holds several accepts. */
   maxItems?: number;
+  /** Whether a `toggle` field is on. */
+  checked?: boolean;
   onChange: (value: string | null) => void;
   /** Replaces the values of a field that holds several. */
   onChangeValues?: (values: string[]) => void;
+  /** Turns a `toggle` field on or off. */
+  onChangeChecked?: (checked: boolean) => void;
 };
 
 export type BlockFieldRenderer = (

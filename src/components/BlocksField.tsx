@@ -19,7 +19,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
-import { FieldRadioGroup, FieldText } from '@m10c/mui-kit';
+import { FieldRadioGroup, FieldSwitch, FieldText } from '@m10c/mui-kit';
 import React from 'react';
 import { FieldProp } from 'react-typed-form';
 
@@ -251,6 +251,7 @@ function SimpleFieldRenderer({
   }
 
   const stringValue = typeof value === 'string' ? value : null;
+  const isOn = value === true;
 
   const customRenderer: BlockFieldRenderer | undefined =
     renderers?.[fieldDef.kind];
@@ -266,10 +267,27 @@ function SimpleFieldRenderer({
           prefix: fieldDef.prefix,
           values: stringValues(value),
           maxItems: fieldDef.maxItems,
+          checked: isOn,
           onChange,
           onChangeValues: onChange,
+          onChangeChecked: onChange,
         })}
       </>
+    );
+  }
+
+  if (fieldDef.kind === 'toggle') {
+    return (
+      <FieldWrap fieldDef={fieldDef}>
+        <FieldSwitch
+          field={{
+            name: fieldKey,
+            label,
+            value: isOn,
+            handleValueChange: onChange,
+          }}
+        />
+      </FieldWrap>
     );
   }
 
@@ -335,7 +353,8 @@ function SimpleFieldRenderer({
 
 type FieldWrapProps = {
   fieldDef: SimpleField;
-  label: string;
+  /** Left out by a field that labels itself, e.g. a toggle. */
+  label?: string;
   children?: React.ReactNode;
 };
 
@@ -344,7 +363,7 @@ function FieldWrap({ fieldDef, label, children }: FieldWrapProps) {
   return (
     <Stack spacing={1}>
       <Stack spacing={0.5}>
-        <Typography variant="subtitle2">{label}</Typography>
+        {label && <Typography variant="subtitle2">{label}</Typography>}
         {fieldDef.hint && (
           <Typography variant="body2" color="text.secondary">
             {fieldDef.hint}
@@ -386,8 +405,10 @@ function fieldLabel(fieldDef: BlockTypeField, fallback: string) {
   return `${fieldDef.label ?? fallback}${fieldDef.required ? '*' : ''}`;
 }
 
-/** What a saved value reads as, naming the choice it stands for. */
-function optionLabel(fieldDef: SimpleField, value: string | null) {
+/** What a saved value reads as in a card's summary. */
+function fieldSummary(fieldDef: SimpleField, value: unknown) {
+  if (fieldDef.kind === 'toggle') return value === true ? 'Yes' : 'No';
+  if (typeof value !== 'string') return null;
   const option = fieldDef.options?.find((item) => item.value === value);
   return option?.label ?? value;
 }
@@ -654,7 +675,7 @@ function ListItemCard({
                 preview(value)
               ) : (
                 <Typography variant="body1">
-                  {optionLabel(subFieldDef, value)}
+                  {fieldSummary(subFieldDef, item[subKey])}
                 </Typography>
               )}
             </Stack>
