@@ -22,6 +22,7 @@ import BlocksField, { type ListCardIcons } from './BlocksField';
 import type {
   Block,
   BlockFieldPreviews,
+  BlockErrors,
   BlockFieldRenderers,
   BlockTypeInput,
 } from '../types';
@@ -49,6 +50,7 @@ type Props = {
   renderers?: BlockFieldRenderers;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
+  errors?: BlockErrors;
   /** Names for the preview's device sizes, e.g. 'Mobile website'. */
   deviceLabels?: Partial<Record<PreviewWidth, string>>;
   /** Site origin for the preview iframe and postMessage target. */
@@ -60,6 +62,8 @@ type Props = {
   /** CMS paths that are global pages (footer, navigation, …). */
   globalPagePaths?: readonly string[];
   isSaving?: boolean;
+  /** Greys out publishing for an admin who may only view. */
+  publishDisabled?: boolean;
   onPublish: () => void;
 };
 
@@ -69,6 +73,7 @@ export default function PageEditor({
   renderers,
   previews,
   icons,
+  errors,
   deviceLabels,
   previewUrl,
   pagePath,
@@ -76,6 +81,7 @@ export default function PageEditor({
   previewContent,
   globalPagePaths = [],
   isSaving,
+  publishDisabled,
   onPublish,
 }: Props) {
   const [showPreview, setShowPreview] = React.useState(true);
@@ -128,6 +134,7 @@ export default function PageEditor({
             renderers={renderers}
             previews={previews}
             icons={icons}
+            errors={errors}
           />
         </Box>
 
@@ -189,7 +196,11 @@ export default function PageEditor({
           bgcolor: 'background.paper',
         }}
       >
-        <Button variant="contained" onClick={onPublish} disabled={isSaving}>
+        <Button
+          variant="contained"
+          onClick={onPublish}
+          disabled={isSaving || publishDisabled}
+        >
           Publish Changes
         </Button>
       </Stack>
@@ -206,16 +217,34 @@ function PreviewIframe({
   src: string;
   renderWidth: number;
 }) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = React.useState(0);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      setContainerWidth(entry.contentRect.width);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   if (!src) return null;
 
-  // The site renders at its real width, so a device wider than the pane is
-  // scrolled to rather than scaled down.
+  const scale =
+    containerWidth > 0 ? Math.min(1, containerWidth / renderWidth) : 0.5;
+
   return (
-    <Box sx={{ flex: 1, overflow: 'auto', p: 1.5, pt: 0 }}>
+    <Box ref={containerRef} sx={{ flex: 1, overflow: 'hidden', p: 1.5, pt: 0 }}>
       <Box
         sx={{
-          width: renderWidth,
+          width: '100%',
+          maxWidth: renderWidth,
           height: '100%',
+          overflow: 'hidden',
           mx: 'auto',
         }}
       >
@@ -224,10 +253,12 @@ function PreviewIframe({
           src={src}
           title="Page preview"
           style={{
-            width: '100%',
-            height: '100%',
+            width: renderWidth,
+            height: `${Math.round(100 / scale)}%`,
             border: 'none',
             backgroundColor: 'white',
+            transformOrigin: 'top left',
+            transform: `scale(${scale})`,
             display: 'block',
             borderRadius: 8,
           }}

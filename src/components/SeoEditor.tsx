@@ -23,6 +23,8 @@ type Props = {
   fallbackTitle: string;
   siteName?: string;
   isSaving?: boolean;
+  /** Greys out publishing for an admin who may only view. */
+  publishDisabled?: boolean;
   onPublish: () => void;
 };
 
@@ -71,6 +73,7 @@ export default function SeoEditor({
   fallbackTitle,
   siteName = '',
   isSaving,
+  publishDisabled,
   onPublish,
 }: Props) {
   const pageTitle = pageTitleField.value ?? '';
@@ -292,7 +295,7 @@ export default function SeoEditor({
           bgcolor: 'background.paper',
         }}
       >
-        <Button variant="contained" onClick={onPublish} disabled={isSaving}>
+        <Button variant="contained" onClick={onPublish} disabled={isSaving || publishDisabled}>
           Publish Changes
         </Button>
       </Stack>

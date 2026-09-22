@@ -3,6 +3,7 @@ export type SimpleFieldKind =
   | 'textarea'
   | 'richtext'
   | 'markdown'
+  | 'icon'
   | 'image'
   | 'images'
   | 'choice'
@@ -100,6 +101,8 @@ export type BlockFieldRendererProps = {
   hint?: string;
   /** Fixed text before the input, e.g. a currency symbol. */
   prefix?: string;
+  /** A validation message for the field, e.g. from the server. */
+  error?: string;
   /** The saved values of a field that holds several, e.g. `images`. */
   values?: string[];
   /** Caps how many values a field that holds several accepts. */
@@ -120,6 +123,12 @@ export type BlockFieldRenderer = (
 export type BlockFieldRenderers = Partial<
   Record<SimpleFieldKind | string, BlockFieldRenderer>
 >;
+
+/**
+ * Validation messages keyed by field path: `<block>.<field>` for a simple
+ * field, `<block>.<field>.<item>.<subField>` inside a list.
+ */
+export type BlockErrors = Record<string, string>;
 
 /**
  * Draws a field's saved value inside a card summary, e.g. the icon a slug

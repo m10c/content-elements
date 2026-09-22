@@ -25,6 +25,7 @@ import { FieldProp } from 'react-typed-form';
 
 import type {
   Block,
+  BlockErrors,
   BlockFieldPreviews,
   BlockFieldRenderer,
   BlockFieldRenderers,
@@ -47,6 +48,7 @@ type Props = {
   renderers?: BlockFieldRenderers;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
+  errors?: BlockErrors;
 };
 
 export default function BlocksField({
@@ -55,6 +57,7 @@ export default function BlocksField({
   renderers,
   previews,
   icons,
+  errors,
 }: Props) {
   const blocks = field.value ?? [];
   // The boundary types `fields` as `unknown` (see BlockTypeInput); the BE sends
@@ -84,6 +87,8 @@ export default function BlocksField({
           renderers={renderers}
           previews={previews}
           icons={icons}
+          errors={errors}
+          errorPath={String(index)}
           onChange={(next) => updateBlock(index, next)}
         />
       ))}
@@ -97,6 +102,8 @@ type BlockCardProps = {
   renderers?: BlockFieldRenderers;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
+  errors?: BlockErrors;
+  errorPath: string;
   onChange: (next: Block) => void;
 };
 
@@ -106,6 +113,8 @@ function BlockCard({
   renderers,
   previews,
   icons,
+  errors,
+  errorPath,
   onChange,
 }: BlockCardProps) {
   function updateData(key: string, value: unknown) {
@@ -137,6 +146,7 @@ function BlockCard({
                 fieldDef={headerFieldDef}
                 value={block.data[key]}
                 renderers={renderers}
+                error={errors?.[`${errorPath}.${key}`]}
                 onChange={(value) => updateData(key, value)}
               />
             ),
@@ -166,6 +176,8 @@ function BlockCard({
                   renderers={renderers}
                   previews={previews}
                   icons={icons}
+                  errors={errors}
+                  errorPath={`${errorPath}.${key}`}
                   headerSlot={renderHeaderFields(fieldDef)}
                   onChange={(value) => updateData(key, value)}
                 />
@@ -188,6 +200,8 @@ type BlockFieldRendererProps = {
   renderers?: BlockFieldRenderers;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
+  errors?: BlockErrors;
+  errorPath: string;
   headerSlot?: React.ReactNode;
   onChange: (value: unknown) => void;
 };
@@ -199,6 +213,8 @@ function BlockFieldRenderer({
   renderers,
   previews,
   icons,
+  errors,
+  errorPath,
   headerSlot,
   onChange,
 }: BlockFieldRendererProps) {
@@ -210,6 +226,8 @@ function BlockFieldRenderer({
         renderers={renderers}
         previews={previews}
         icons={icons}
+        errors={errors}
+        errorPath={errorPath}
         headerSlot={headerSlot}
         onChange={onChange}
       />
@@ -221,6 +239,7 @@ function BlockFieldRenderer({
       fieldDef={fieldDef}
       value={value}
       renderers={renderers}
+      error={errors?.[errorPath]}
       onChange={onChange}
     />
   );
@@ -233,6 +252,7 @@ type SimpleFieldRendererProps = {
   renderers?: BlockFieldRenderers;
   /** Overrides the rendered label (used to suffix a list item's index). */
   labelOverride?: string;
+  error?: string;
   onChange: (value: unknown) => void;
 };
 
@@ -242,6 +262,7 @@ function SimpleFieldRenderer({
   value,
   renderers,
   labelOverride,
+  error,
   onChange,
 }: SimpleFieldRendererProps) {
   const label = labelOverride ?? fieldLabel(fieldDef, fieldKey);
@@ -265,6 +286,7 @@ function SimpleFieldRenderer({
           features: fieldDef.features,
           hint: fieldDef.hint,
           prefix: fieldDef.prefix,
+          error,
           values: stringValues(value),
           maxItems: fieldDef.maxItems,
           checked: isOn,
@@ -278,7 +300,7 @@ function SimpleFieldRenderer({
 
   if (fieldDef.kind === 'toggle') {
     return (
-      <FieldWrap fieldDef={fieldDef}>
+      <FieldWrap fieldDef={fieldDef} error={error}>
         <FieldSwitch
           field={{
             name: fieldKey,
@@ -293,7 +315,7 @@ function SimpleFieldRenderer({
 
   if (fieldDef.kind === 'choice') {
     return (
-      <FieldWrap fieldDef={fieldDef} label={label}>
+      <FieldWrap fieldDef={fieldDef} label={label} error={error}>
         <FieldRadioGroup
           field={{
             name: fieldKey,
@@ -310,7 +332,7 @@ function SimpleFieldRenderer({
   // Uploading belongs to the consuming app, so an images field draws nothing
   // of its own until a renderer is given for it.
   if (fieldDef.kind === 'images') {
-    return <FieldWrap fieldDef={fieldDef} label={label} />;
+    return <FieldWrap fieldDef={fieldDef} label={label} error={error} />;
   }
 
   const fieldProp: FieldProp<string | null> = {
@@ -318,6 +340,7 @@ function SimpleFieldRenderer({
     label,
     value: stringValue,
     handleValueChange: onChange,
+    errorList: error === undefined ? undefined : [error],
   };
 
   const multiline =
@@ -355,11 +378,12 @@ type FieldWrapProps = {
   fieldDef: SimpleField;
   /** Left out by a field that labels itself, e.g. a toggle. */
   label?: string;
+  error?: string;
   children?: React.ReactNode;
 };
 
 /** A field's label and hint, above whatever draws its value. */
-function FieldWrap({ fieldDef, label, children }: FieldWrapProps) {
+function FieldWrap({ fieldDef, label, error, children }: FieldWrapProps) {
   return (
     <Stack spacing={1}>
       <Stack spacing={0.5}>
@@ -371,7 +395,16 @@ function FieldWrap({ fieldDef, label, children }: FieldWrapProps) {
         )}
       </Stack>
       {children}
+      {error && <FieldError error={error} />}
     </Stack>
+  );
+}
+
+function FieldError({ error }: { error: string }) {
+  return (
+    <Typography variant="caption" color="error.main">
+      {error}
+    </Typography>
   );
 }
 
@@ -410,10 +443,39 @@ function fieldSummary(fieldDef: SimpleField, value: unknown) {
   if (fieldDef.kind === 'toggle') return value === true ? 'Yes' : 'No';
   if (typeof value !== 'string') return null;
   const option = fieldDef.options?.find((item) => item.value === value);
-  return option?.label ?? value;
+  if (option) return option.label;
+  return fieldDef.kind === 'richtext' || fieldDef.kind === 'markdown'
+    ? plainText(value)
+    : value;
+}
+
+/** A card summarises its item as text, so markup is shown as the words it holds. */
+function plainText(html: string) {
+  return html
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 type ListItem = Record<string, unknown>;
+
+/** A new item starts with every field set, so none is sent to the API missing. */
+function emptyItem(fieldDef: ListField): ListItem {
+  return Object.fromEntries(
+    Object.entries(fieldDef.itemFields).map(([key, subFieldDef]) => [
+      key,
+      subFieldDef.kind === 'toggle' ? false : '',
+    ]),
+  );
+}
 
 type ListFieldRendererProps = {
   fieldDef: ListField;
@@ -421,6 +483,8 @@ type ListFieldRendererProps = {
   renderers?: BlockFieldRenderers;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
+  errors?: BlockErrors;
+  errorPath: string;
   headerSlot?: React.ReactNode;
   onChange: (value: ListItem[]) => void;
 };
@@ -441,6 +505,8 @@ function ListInline({
   fieldDef,
   value: items,
   renderers,
+  errors,
+  errorPath,
   onChange,
 }: ListFieldRendererProps) {
   const itemLabel = fieldDef.itemLabel ?? fieldDef.label ?? 'Item';
@@ -464,6 +530,7 @@ function ListInline({
               value={item[subKey]}
               renderers={renderers}
               labelOverride={`${fieldLabel(subFieldDef, subKey)} ${itemLabel} ${index + 1}`}
+              error={errors?.[`${errorPath}.${index}.${subKey}`]}
               onChange={(subValue) =>
                 updateItem(index, { ...item, [subKey]: subValue })
               }
@@ -486,6 +553,8 @@ function ListCards({
   renderers,
   previews,
   icons,
+  errors,
+  errorPath,
   headerSlot,
   onChange,
 }: ListFieldRendererProps) {
@@ -500,6 +569,15 @@ function ListCards({
   const canDelete = items.length > (minItems ?? 0);
   // A list whose length is fixed has nothing to add or count.
   const isFixedLength = minItems !== undefined && minItems === maxItems;
+
+  function itemErrors(index: number): Record<string, string> {
+    const prefix = `${errorPath}.${index}.`;
+    return Object.fromEntries(
+      Object.entries(errors ?? {})
+        .filter(([path]) => path.startsWith(prefix))
+        .map(([path, message]) => [path.slice(prefix.length), message]),
+    );
+  }
 
   function replaceItem(index: number, next: ListItem) {
     const updated = items.slice();
@@ -557,6 +635,7 @@ function ListCards({
           item={item}
           previews={previews}
           icons={icons}
+          errors={itemErrors(index)}
           onEdit={() => setEditedIndex(index)}
           onDragStart={() => setDraggedIndex(index)}
           onDragEnd={() => setDraggedIndex(null)}
@@ -575,6 +654,7 @@ function ListCards({
           fieldDef={fieldDef}
           item={editedItem}
           renderers={renderers}
+          errors={itemErrors(editedIndex)}
           confirmLabel="Save"
           onDelete={
             canDelete
@@ -596,7 +676,7 @@ function ListCards({
         <ListItemDialog
           title={`Add ${fieldDef.label ?? itemLabel}`}
           fieldDef={fieldDef}
-          item={{}}
+          item={emptyItem(fieldDef)}
           renderers={renderers}
           confirmLabel="Create"
           onConfirm={(next) => {
@@ -615,6 +695,7 @@ type ListItemCardProps = {
   item: ListItem;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
+  errors?: Record<string, string>;
   onEdit: () => void;
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -626,6 +707,7 @@ function ListItemCard({
   item,
   previews,
   icons,
+  errors,
   onEdit,
   onDragStart,
   onDragEnd,
@@ -678,6 +760,7 @@ function ListItemCard({
                   {fieldSummary(subFieldDef, item[subKey])}
                 </Typography>
               )}
+              {errors?.[subKey] && <FieldError error={errors[subKey]} />}
             </Stack>
           );
         })}
@@ -699,6 +782,7 @@ type ListItemDialogProps = {
   fieldDef: ListField;
   item: ListItem;
   renderers?: BlockFieldRenderers;
+  errors?: Record<string, string>;
   confirmLabel: string;
   onDelete?: () => void;
   onConfirm: (item: ListItem) => void;
@@ -710,6 +794,7 @@ function ListItemDialog({
   fieldDef,
   item,
   renderers,
+  errors,
   confirmLabel,
   onDelete,
   onConfirm,
@@ -761,6 +846,7 @@ function ListItemDialog({
               fieldDef={subFieldDef}
               value={draft[subKey]}
               renderers={renderers}
+              error={errors?.[subKey]}
               onChange={(subValue) =>
                 setDraft({ ...draft, [subKey]: subValue })
               }
