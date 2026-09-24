@@ -17,5 +17,6 @@ export default defineConfig({
     '@mui/material',
     '@mui/icons-material',
     '@m10c/mui-kit',
+    'api-read-hook',
   ],
 });

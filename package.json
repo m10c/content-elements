@@ -41,13 +41,14 @@
     "pretty:check": "prettier --check \"src/**/*.{ts,tsx}\""
   },
   "peerDependencies": {
+    "@m10c/mui-kit": "*",
     "@mui/icons-material": ">=5.0.0",
     "@mui/material": ">=5.0.0",
     "date-fns": ">=2.0.0",
-    "@m10c/mui-kit": "*",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0",
-    "react-typed-form": ">=0.3.0"
+    "react-typed-form": ">=0.3.0",
+    "api-read-hook": ">=0.1.0"
   },
   "peerDependenciesMeta": {
     "@mui/material": {
@@ -64,21 +65,25 @@
     },
     "@m10c/mui-kit": {
       "optional": true
+    },
+    "api-read-hook": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@emotion/react": "^11.0.0",
     "@emotion/styled": "^11.0.0",
     "@eslint/js": "^9",
+    "@m10c/mui-kit": "^0.0.2",
     "@mui/icons-material": "^6.4.7",
     "@mui/material": "^6.4.7",
     "@types/react": "19.1.5",
     "@types/react-dom": "19.1.5",
+    "api-read-hook": "^0.1.1",
     "date-fns": "^2.30.0",
     "eslint": "^9",
     "eslint-config-prettier": "^9",
     "eslint-plugin-react-hooks": "^5",
-    "@m10c/mui-kit": "^0.0.2",
     "prettier": "^3.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

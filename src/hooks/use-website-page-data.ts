@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react';
 
-export type PreviewMessage = {
-  type: 'm10c-cms-preview';
-  content: Record<string, unknown>;
-  pagePath: string;
-  /** Global content (footer, navigation, …) keyed by page path. */
-  globals?: Record<string, unknown>;
-};
+import { PREVIEW_MESSAGE } from '../constants';
+import type { PreviewMessage } from '../types';
 
 type UseWebsitePageDataConfig = {
   path: string;
@@ -47,7 +42,7 @@ export default function useWebsitePageData(
 
     function handleMessage(event: MessageEvent) {
       const message = event.data as PreviewMessage;
-      if (message?.type !== 'm10c-cms-preview') return;
+      if (message?.type !== PREVIEW_MESSAGE.content) return;
       // Ignore edits aimed at another page/global so this page keeps its data.
       if (message.pagePath === config.path) {
         setPreviewData(message.content);
@@ -55,7 +50,7 @@ export default function useWebsitePageData(
     }
 
     window.addEventListener('message', handleMessage);
-    window.parent.postMessage({ type: 'm10c-cms-preview-ready' }, '*');
+    window.parent.postMessage({ type: PREVIEW_MESSAGE.ready }, '*');
 
     return () => window.removeEventListener('message', handleMessage);
   }, [isPreview, config.path]);

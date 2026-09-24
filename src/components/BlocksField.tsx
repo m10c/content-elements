@@ -2,6 +2,7 @@
 
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import {
@@ -23,7 +24,12 @@ import { FieldRadioGroup, FieldSwitch, FieldText } from '@m10c/mui-kit';
 import React from 'react';
 import { FieldProp } from 'react-typed-form';
 
+import useDragReorder from '../hooks/use-drag-reorder';
+import useDraggableByHandle from '../hooks/use-draggable-by-handle';
+import { emptyFieldValue, moveItem } from '../utils';
+import ConfirmDialog from './ConfirmDialog';
 import type {
+  DragRowProps,
   Block,
   BlockErrors,
   BlockFieldPreviews,
@@ -40,6 +46,7 @@ import type {
 export type ListCardIcons = {
   drag?: React.ReactNode;
   edit?: React.ReactNode;
+  delete?: React.ReactNode;
 };
 
 type Props = {
@@ -49,6 +56,9 @@ type Props = {
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
   errors?: BlockErrors;
+  canEditBlockList?: boolean;
+  header?: React.ReactNode;
+  footer?: React.ReactNode;
 };
 
 export default function BlocksField({
@@ -58,8 +68,22 @@ export default function BlocksField({
   previews,
   icons,
   errors,
+  canEditBlockList = false,
+  header,
+  footer,
 }: Props) {
   const blocks = field.value ?? [];
+  const [pendingDeleteIndex, setPendingDeleteIndex] = React.useState<
+    number | null
+  >(null);
+
+  const nextKeyRef = React.useRef(0);
+  const keysRef = React.useRef<string[]>([]);
+  if (keysRef.current.length !== blocks.length) {
+    keysRef.current = blocks.map(
+      (_, index) => keysRef.current[index] ?? `block-${nextKeyRef.current++}`,
+    );
+  }
   // The boundary types `fields` as `unknown` (see BlockTypeInput); the BE sends
   // the rich field metadata, so narrow to BlockType here, the single point of
   // truth for the shape the renderers below depend on.
@@ -77,22 +101,51 @@ export default function BlocksField({
     field.handleValueChange(updated);
   }
 
+  function deleteBlock(index: number) {
+    keysRef.current = keysRef.current.filter((_, i) => i !== index);
+    field.handleValueChange(blocks.filter((_, i) => i !== index));
+  }
+
+  const getDragProps = useDragReorder((from, to) => {
+    keysRef.current = moveItem(keysRef.current, from, to);
+    field.handleValueChange(moveItem(blocks, from, to));
+  });
+
   return (
-    <Stack spacing={2}>
-      {blocks.map((block, index) => (
-        <BlockCard
-          key={index}
-          block={block}
-          blockType={blockTypesByKey[block.type]}
-          renderers={renderers}
-          previews={previews}
-          icons={icons}
-          errors={errors}
-          errorPath={String(index)}
-          onChange={(next) => updateBlock(index, next)}
-        />
-      ))}
-    </Stack>
+    <>
+      <Stack spacing={2}>
+        {header}
+        {blocks.map((block, index) => (
+          <BlockCard
+            key={keysRef.current[index]}
+            block={block}
+            blockType={blockTypesByKey[block.type]}
+            renderers={renderers}
+            previews={previews}
+            icons={icons}
+            errors={errors}
+            errorPath={String(index)}
+            dragProps={canEditBlockList ? getDragProps(index) : undefined}
+            onChange={(next) => updateBlock(index, next)}
+            onDelete={
+              canEditBlockList ? () => setPendingDeleteIndex(index) : undefined
+            }
+          />
+        ))}
+        {footer}
+      </Stack>
+      <ConfirmDialog
+        open={pendingDeleteIndex !== null}
+        title="Delete block"
+        description="Are you sure you want to delete this block?"
+        confirmText="Delete"
+        onClose={() => setPendingDeleteIndex(null)}
+        onConfirm={() => {
+          if (pendingDeleteIndex !== null) deleteBlock(pendingDeleteIndex);
+          setPendingDeleteIndex(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -104,7 +157,9 @@ type BlockCardProps = {
   icons?: ListCardIcons;
   errors?: BlockErrors;
   errorPath: string;
+  dragProps?: DragRowProps;
   onChange: (next: Block) => void;
+  onDelete?: () => void;
 };
 
 function BlockCard({
@@ -115,8 +170,12 @@ function BlockCard({
   icons,
   errors,
   errorPath,
+  dragProps,
   onChange,
+  onDelete,
 }: BlockCardProps) {
+  const { isDraggable, stopDragging, handleProps } = useDraggableByHandle();
+
   function updateData(key: string, value: unknown) {
     onChange({ ...block, data: { ...block.data, [key]: value } });
   }
@@ -155,14 +214,48 @@ function BlockCard({
     );
   }
 
+  const showLabel = !blockType?.hideLabel;
+
   return (
-    <Card>
+    <Card
+      draggable={isDraggable}
+      onDragStart={dragProps?.onDragStart}
+      onDragEnd={() => {
+        stopDragging();
+        dragProps?.onDragEnd();
+      }}
+      onDragOver={dragProps?.onDragOver}
+      onDrop={dragProps?.onDrop}
+    >
       <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
         <Stack spacing={2}>
-          {!blockType?.hideLabel && (
-            <Typography variant="subtitle1">
-              {blockType?.label ?? `Unknown block: ${block.type}`}
-            </Typography>
+          {(showLabel || dragProps || onDelete) && (
+            <Stack direction="row" alignItems="center" spacing={1}>
+              {dragProps && (
+                <Box
+                  {...handleProps}
+                  sx={{ display: 'flex', color: 'primary.main', cursor: 'grab' }}
+                >
+                  {icons?.drag ?? <DragIndicatorIcon fontSize="small" />}
+                </Box>
+              )}
+              <Box sx={{ flex: 1 }}>
+                {showLabel && (
+                  <Typography variant="subtitle1">
+                    {blockType?.label ?? `Unknown block: ${block.type}`}
+                  </Typography>
+                )}
+              </Box>
+              {onDelete && (
+                <IconButton
+                  size="small"
+                  onClick={onDelete}
+                  aria-label="Delete block"
+                >
+                  {icons?.delete ?? <DeleteOutlineIcon fontSize="small" />}
+                </IconButton>
+              )}
+            </Stack>
           )}
           {blockType ? (
             Object.entries(blockType.fields)
@@ -480,7 +573,7 @@ function emptyItem(fieldDef: ListField): ListItem {
   return Object.fromEntries(
     Object.entries(fieldDef.itemFields).map(([key, subFieldDef]) => [
       key,
-      subFieldDef.kind === 'boolean' ? false : '',
+      emptyFieldValue(subFieldDef),
     ]),
   );
 }
@@ -568,7 +661,6 @@ function ListCards({
 }: ListFieldRendererProps) {
   const [editedIndex, setEditedIndex] = React.useState<number | null>(null);
   const [isAdding, setIsAdding] = React.useState(false);
-  const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
 
   const itemLabel = fieldDef.itemLabel ?? 'item';
   const editedItem = editedIndex === null ? undefined : items[editedIndex];
@@ -597,13 +689,9 @@ function ListCards({
     onChange(items.filter((_, i) => i !== index));
   }
 
-  function moveItem(from: number, to: number) {
-    const updated = items.slice();
-    const [moved] = updated.splice(from, 1);
-    if (moved === undefined) return;
-    updated.splice(to, 0, moved);
-    onChange(updated);
-  }
+  const getDragProps = useDragReorder((from, to) =>
+    onChange(moveItem(items, from, to)),
+  );
 
   return (
     <Stack spacing={1.5}>
@@ -645,14 +733,7 @@ function ListCards({
           icons={icons}
           errors={itemErrors(index)}
           onEdit={() => setEditedIndex(index)}
-          onDragStart={() => setDraggedIndex(index)}
-          onDragEnd={() => setDraggedIndex(null)}
-          onDrop={() => {
-            if (draggedIndex !== null && draggedIndex !== index) {
-              moveItem(draggedIndex, index);
-            }
-            setDraggedIndex(null);
-          }}
+          dragProps={getDragProps(index)}
         />
       ))}
 
@@ -705,9 +786,7 @@ type ListItemCardProps = {
   icons?: ListCardIcons;
   errors?: Record<string, string>;
   onEdit: () => void;
-  onDragStart: () => void;
-  onDragEnd: () => void;
-  onDrop: () => void;
+  dragProps: DragRowProps;
 };
 
 function ListItemCard({
@@ -717,12 +796,9 @@ function ListItemCard({
   icons,
   errors,
   onEdit,
-  onDragStart,
-  onDragEnd,
-  onDrop,
+  dragProps,
 }: ListItemCardProps) {
-  // Only the handle starts a drag, so text inside the card stays selectable.
-  const [isDraggable, setIsDraggable] = React.useState(false);
+  const { isDraggable, stopDragging, handleProps } = useDraggableByHandle();
 
   return (
     <Stack
@@ -730,18 +806,17 @@ function ListItemCard({
       spacing={1}
       alignItems="flex-start"
       draggable={isDraggable}
-      onDragStart={onDragStart}
+      onDragStart={dragProps.onDragStart}
       onDragEnd={() => {
-        setIsDraggable(false);
-        onDragEnd();
+        stopDragging();
+        dragProps.onDragEnd();
       }}
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={onDrop}
+      onDragOver={dragProps.onDragOver}
+      onDrop={dragProps.onDrop}
       sx={{ p: 2, borderRadius: 1, bgcolor: 'grey.100' }}
     >
       <Box
-        onMouseDown={() => setIsDraggable(true)}
-        onMouseUp={() => setIsDraggable(false)}
+        {...handleProps}
         sx={{ display: 'flex', color: 'primary.main', cursor: 'grab' }}
       >
         {icons?.drag ?? <DragIndicatorIcon fontSize="small" />}

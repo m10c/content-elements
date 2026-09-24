@@ -1,3 +1,5 @@
+import type { PREVIEW_MESSAGE } from './constants';
+
 export type SimpleFieldKind =
   | 'text'
   | 'textarea'
@@ -136,3 +138,71 @@ export type BlockFieldPreview = (value: string | null) => React.ReactNode;
 export type BlockFieldPreviews = Partial<
   Record<SimpleFieldKind | string, BlockFieldPreview>
 >;
+
+export type VariantBase = {
+  '@id': string;
+  id: string;
+  publishAt?: string | null;
+  updatedAt?: string;
+};
+
+export type DimensionChip = {
+  label: string;
+  color: 'default' | 'success' | 'warning' | 'info';
+};
+
+export type DimensionOption = {
+  value: string;
+  label: string;
+};
+
+export type Translations = Record<string, unknown>;
+
+export type Translate = (
+  fields: string[],
+  source: { id: string; value: string },
+) => Promise<Translations | null>;
+
+export type VariantDetailBase = { updatedAt?: string };
+
+export type VariantEntity = {
+  slug: string;
+  identityCollection?: string;
+  identityId: string;
+  entityLabel: string;
+};
+
+export type SubmitHelpers = {
+  addSubmitError: (field: string, error: string) => void;
+  setLoading: (loading: boolean) => void;
+};
+
+export type CallApi = <R>(
+  path: string,
+  requestOptions?: {
+    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+    jsonBody?: unknown;
+  },
+  moreOptions?: { addSubmitError?: (field: string, error: string) => void },
+) => Promise<{ data: R } | undefined>;
+
+export type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
+
+export type PreviewMessage = {
+  type: typeof PREVIEW_MESSAGE.content;
+  content: Record<string, unknown>;
+  pagePath?: string;
+  globals?: Record<string, unknown>;
+};
+
+export type PreviewAuthMessage = {
+  type: typeof PREVIEW_MESSAGE.auth;
+  token: string | null;
+};
+
+export type DragRowProps = {
+  onDragStart: (event: React.DragEvent) => void;
+  onDragEnd: () => void;
+  onDragOver: (event: React.DragEvent) => void;
+  onDrop: () => void;
+};

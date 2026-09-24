@@ -66,3 +66,14 @@ admin side is handled by `PageEditor`; the web side by `useWebsitePageData` — 
 
 The only requirement is that the admin's `previewUrl` is set to the web app's
 exact origin (matching scheme, host, and port), since that's the page the editor loads and sends edits to.
+
+### Authed previews
+
+A preview that calls authed APIs (e.g. a React Native web route) gets the
+admin's token over `postMessage`, never in the URL:
+
+- Admin: pass `getToken` to `usePreviewSender`. It answers token requests from
+  the preview iframe only (checked by origin and source).
+- Preview: `usePreviewAuth({ adminOrigin })` requests a token on mount and
+  returns `{ token, requestToken }`. Call `requestToken()` again when the token
+  expires (e.g. after a 401). Messages from any other origin are ignored.
