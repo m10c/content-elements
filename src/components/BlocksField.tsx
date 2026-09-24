@@ -284,7 +284,7 @@ function SimpleFieldRenderer({
           label,
           value: stringValue,
           features: fieldDef.features,
-          hint: fieldDef.hint,
+          hint: fieldHint(fieldDef),
           prefix: fieldDef.prefix,
           error,
           values: stringValues(value),
@@ -298,7 +298,7 @@ function SimpleFieldRenderer({
     );
   }
 
-  if (fieldDef.kind === 'toggle') {
+  if (fieldDef.kind === 'boolean') {
     return (
       <FieldWrap fieldDef={fieldDef} error={error}>
         <FieldSwitch
@@ -313,7 +313,7 @@ function SimpleFieldRenderer({
     );
   }
 
-  if (fieldDef.kind === 'choice') {
+  if (fieldDef.kind === 'select') {
     return (
       <FieldWrap fieldDef={fieldDef} label={label} error={error}>
         <FieldRadioGroup
@@ -323,7 +323,10 @@ function SimpleFieldRenderer({
             value: stringValue ?? '',
             handleValueChange: onChange,
           }}
-          options={fieldDef.options ?? []}
+          options={(fieldDef.options ?? []).map((option) => ({
+            value: option,
+            label: optionLabel(fieldDef, option),
+          }))}
         />
       </FieldWrap>
     );
@@ -376,7 +379,7 @@ function SimpleFieldRenderer({
 
 type FieldWrapProps = {
   fieldDef: SimpleField;
-  /** Left out by a field that labels itself, e.g. a toggle. */
+  /** Left out by a field that labels itself, e.g. a `boolean`. */
   label?: string;
   error?: string;
   children?: React.ReactNode;
@@ -388,9 +391,9 @@ function FieldWrap({ fieldDef, label, error, children }: FieldWrapProps) {
     <Stack spacing={1}>
       <Stack spacing={0.5}>
         {label && <Typography variant="subtitle2">{label}</Typography>}
-        {fieldDef.hint && (
+        {fieldHint(fieldDef) && (
           <Typography variant="body2" color="text.secondary">
-            {fieldDef.hint}
+            {fieldHint(fieldDef)}
           </Typography>
         )}
       </Stack>
@@ -438,12 +441,22 @@ function fieldLabel(fieldDef: BlockTypeField, fallback: string) {
   return `${fieldDef.label ?? fallback}${fieldDef.required ? '*' : ''}`;
 }
 
+function fieldHint(fieldDef: SimpleField) {
+  if (fieldDef.hint) return fieldDef.hint;
+  return fieldDef.dimensions
+    ? `Recommended size ${fieldDef.dimensions}px`
+    : undefined;
+}
+
+function optionLabel(fieldDef: SimpleField, option: string) {
+  return fieldDef.optionLabels?.[option] ?? option;
+}
+
 /** What a saved value reads as in a card's summary. */
 function fieldSummary(fieldDef: SimpleField, value: unknown) {
-  if (fieldDef.kind === 'toggle') return value === true ? 'Yes' : 'No';
+  if (fieldDef.kind === 'boolean') return value === true ? 'Yes' : 'No';
   if (typeof value !== 'string') return null;
-  const option = fieldDef.options?.find((item) => item.value === value);
-  if (option) return option.label;
+  if (fieldDef.options?.includes(value)) return optionLabel(fieldDef, value);
   return fieldDef.kind === 'richtext' || fieldDef.kind === 'markdown'
     ? plainText(value)
     : value;
@@ -472,7 +485,7 @@ function emptyItem(fieldDef: ListField): ListItem {
   return Object.fromEntries(
     Object.entries(fieldDef.itemFields).map(([key, subFieldDef]) => [
       key,
-      subFieldDef.kind === 'toggle' ? false : '',
+      subFieldDef.kind === 'boolean' ? false : '',
     ]),
   );
 }
@@ -490,10 +503,10 @@ type ListFieldRendererProps = {
 };
 
 function ListFieldRenderer(props: ListFieldRendererProps) {
-  return props.fieldDef.variant === 'cards' ? (
-    <ListCards {...props} />
-  ) : (
+  return props.fieldDef.variant === 'inline' ? (
     <ListInline {...props} />
+  ) : (
+    <ListCards {...props} />
   );
 }
 

@@ -6,14 +6,9 @@ export type SimpleFieldKind =
   | 'icon'
   | 'image'
   | 'images'
-  | 'choice'
-  | 'toggle'
+  | 'select'
+  | 'boolean'
   | 'note';
-
-export type FieldOption = {
-  value: string;
-  label: string;
-};
 
 export type SimpleField = {
   kind: SimpleFieldKind;
@@ -23,14 +18,18 @@ export type SimpleField = {
   maxLength?: number;
   /** Markdown feature flags, e.g. ['bold', 'italic', 'lists', 'links'] */
   features?: string[];
-  /** Guidance under the label, e.g. the dimensions an image should have. */
+  /** Guidance under the label. */
   hint?: string;
+  /** The size an image should be, e.g. '480x320', shown as a hint. */
+  dimensions?: string;
   /** Fixed text before the input, e.g. a currency symbol. */
   prefix?: string;
   /** What a `note` field says in place of an input. */
   text?: string;
-  /** What a `choice` field offers. */
-  options?: FieldOption[];
+  /** What a `select` field offers. */
+  options?: string[];
+  /** Wording for `options`, which are otherwise shown as their values. */
+  optionLabels?: Record<string, string>;
   /** Caps how many an `images` field holds. */
   maxItems?: number;
 };
@@ -44,9 +43,9 @@ export type ListField = {
   minItems?: number;
   maxItems?: number;
   /**
-   * `inline` lists every item's fields one after another, and items can only be
-   * edited. `cards` shows each item as a summary card that opens a dialog to
-   * edit, and lets an admin add and delete items.
+   * `cards` (the default) shows each item as a summary card that opens a
+   * dialog to edit, and lets an admin add and delete items. `inline` lists
+   * every item's fields one after another, and items can only be edited.
    */
   variant?: 'inline' | 'cards';
   /**
@@ -107,12 +106,12 @@ export type BlockFieldRendererProps = {
   values?: string[];
   /** Caps how many values a field that holds several accepts. */
   maxItems?: number;
-  /** Whether a `toggle` field is on. */
+  /** Whether a `boolean` field is on. */
   checked?: boolean;
   onChange: (value: string | null) => void;
   /** Replaces the values of a field that holds several. */
   onChangeValues?: (values: string[]) => void;
-  /** Turns a `toggle` field on or off. */
+  /** Turns a `boolean` field on or off. */
   onChangeChecked?: (checked: boolean) => void;
 };
 

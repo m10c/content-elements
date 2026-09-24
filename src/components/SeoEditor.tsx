@@ -295,7 +295,11 @@ export default function SeoEditor({
           bgcolor: 'background.paper',
         }}
       >
-        <Button variant="contained" onClick={onPublish} disabled={isSaving || publishDisabled}>
+        <Button
+          variant="contained"
+          onClick={onPublish}
+          disabled={isSaving || publishDisabled}
+        >
           Publish Changes
         </Button>
       </Stack>
