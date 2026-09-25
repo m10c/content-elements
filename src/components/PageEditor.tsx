@@ -18,10 +18,22 @@ import React from 'react';
 import { FieldProp } from 'react-typed-form';
 
 import usePreviewSender from '../hooks/use-preview-sender';
-import BlocksField from './BlocksField';
-import type { Block, BlockFieldRenderers, BlockTypeInput } from '../types';
+import BlocksField, { type ListCardIcons } from './BlocksField';
+import type {
+  Block,
+  BlockFieldPreviews,
+  BlockErrors,
+  BlockFieldRenderers,
+  BlockTypeInput,
+} from '../types';
 
 type PreviewWidth = 'desktop' | 'tablet' | 'mobile';
+
+const DEVICE_LABELS: Record<PreviewWidth, string> = {
+  desktop: 'Desktop',
+  tablet: 'Tablet',
+  mobile: 'Mobile',
+};
 
 const PREVIEW_WIDTHS = {
   desktop: 1280,
@@ -36,13 +48,22 @@ type Props = {
   blockTypes: readonly BlockTypeInput[];
   field: FieldProp<Block[]>;
   renderers?: BlockFieldRenderers;
+  previews?: BlockFieldPreviews;
+  icons?: ListCardIcons;
+  errors?: BlockErrors;
+  /** Names for the preview's device sizes, e.g. 'Mobile website'. */
+  deviceLabels?: Partial<Record<PreviewWidth, string>>;
   /** Site origin for the preview iframe and postMessage target. */
   previewUrl: string;
   pagePath: string;
+  /** The site's route for the page, where it differs from the CMS path. */
+  previewPath?: string;
   previewContent: Record<string, unknown>;
   /** CMS paths that are global pages (footer, navigation, …). */
   globalPagePaths?: readonly string[];
   isSaving?: boolean;
+  /** Greys out publishing for an admin who may only view. */
+  publishDisabled?: boolean;
   onPublish: () => void;
 };
 
@@ -50,11 +71,17 @@ export default function PageEditor({
   blockTypes,
   field,
   renderers,
+  previews,
+  icons,
+  errors,
+  deviceLabels,
   previewUrl,
   pagePath,
+  previewPath,
   previewContent,
   globalPagePaths = [],
   isSaving,
+  publishDisabled,
   onPublish,
 }: Props) {
   const [showPreview, setShowPreview] = React.useState(true);
@@ -62,7 +89,7 @@ export default function PageEditor({
     React.useState<PreviewWidth>('desktop');
 
   const isGlobal = globalPagePaths.includes(pagePath);
-  const routePath = isGlobal ? GLOBAL_PREVIEW_PATH : pagePath;
+  const routePath = isGlobal ? GLOBAL_PREVIEW_PATH : (previewPath ?? pagePath);
 
   const { iframeRef } = usePreviewSender({
     previewUrl,
@@ -105,6 +132,9 @@ export default function PageEditor({
             blockTypes={blockTypes}
             field={field}
             renderers={renderers}
+            previews={previews}
+            icons={icons}
+            errors={errors}
           />
         </Box>
 
@@ -134,9 +164,13 @@ export default function PageEditor({
                   IconComponent={KeyboardArrowDown}
                   sx={{ bgcolor: 'background.paper' }}
                 >
-                  <MenuItem value="desktop">Desktop</MenuItem>
-                  <MenuItem value="tablet">Tablet</MenuItem>
-                  <MenuItem value="mobile">Mobile</MenuItem>
+                  {(Object.keys(DEVICE_LABELS) as PreviewWidth[]).map(
+                    (device) => (
+                      <MenuItem key={device} value={device}>
+                        {deviceLabels?.[device] ?? DEVICE_LABELS[device]}
+                      </MenuItem>
+                    ),
+                  )}
                 </Select>
               </FormControl>
             </Stack>
@@ -162,7 +196,11 @@ export default function PageEditor({
           bgcolor: 'background.paper',
         }}
       >
-        <Button variant="contained" onClick={onPublish} disabled={isSaving}>
+        <Button
+          variant="contained"
+          onClick={onPublish}
+          disabled={isSaving || publishDisabled}
+        >
           Publish Changes
         </Button>
       </Stack>
@@ -185,13 +223,11 @@ function PreviewIframe({
   React.useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
       setContainerWidth(entry.contentRect.width);
     });
-
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
