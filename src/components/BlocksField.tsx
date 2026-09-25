@@ -325,7 +325,7 @@ function SimpleFieldRenderer({
           }}
           options={(fieldDef.options ?? []).map((option) => ({
             value: option,
-            label: optionLabel(fieldDef, option),
+            label: option,
           }))}
         />
       </FieldWrap>
@@ -448,15 +448,10 @@ function fieldHint(fieldDef: SimpleField) {
     : undefined;
 }
 
-function optionLabel(fieldDef: SimpleField, option: string) {
-  return fieldDef.optionLabels?.[option] ?? option;
-}
-
 /** What a saved value reads as in a card's summary. */
 function fieldSummary(fieldDef: SimpleField, value: unknown) {
   if (fieldDef.kind === 'boolean') return value === true ? 'Yes' : 'No';
   if (typeof value !== 'string') return null;
-  if (fieldDef.options?.includes(value)) return optionLabel(fieldDef, value);
   return fieldDef.kind === 'richtext' || fieldDef.kind === 'markdown'
     ? plainText(value)
     : value;

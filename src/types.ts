@@ -28,8 +28,6 @@ export type SimpleField = {
   text?: string;
   /** What a `select` field offers. */
   options?: string[];
-  /** Wording for `options`, which are otherwise shown as their values. */
-  optionLabels?: Record<string, string>;
   /** Caps how many an `images` field holds. */
   maxItems?: number;
 };
