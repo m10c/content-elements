@@ -16,7 +16,6 @@ import useVariantActions, {
   type VariantActionHandlers,
 } from './use-variant-actions';
 import useVariantForm from './use-variant-form';
-import useVariantUrlState from './use-variant-url-state';
 
 export type UseVariantEditorOptions<
   V extends VariantBase,
@@ -84,16 +83,11 @@ export default function useVariantEditor<
     throw new Error(`Dimension "${dimension.key}" has no options`);
   }
 
-  const urlState = useVariantUrlState({
-    key: dimension.key,
-    params: getParams(),
-    defaultValue: initialValue,
-    navigate: setParams,
-  });
   const switcher = useDimensionSwitcher<V, D>({
     dimension,
     variants,
-    urlState,
+    value: getParams()[dimension.key] ?? initialValue,
+    onValueChange: (next) => setParams({ [dimension.key]: next }),
     publishable,
   });
   const { currentVariant, currentDetail, sourceVariant, value } = switcher;

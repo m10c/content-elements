@@ -179,7 +179,7 @@ export type VariantEditorConfig = {
   };
   push: (href: string) => void;
   getParams: () => Record<string, string | undefined>;
-  setParams: (next: Record<string, string | null>) => void;
+  setParams: (next: Record<string, string>) => void;
   defaultDimension: Dimension;
 };
 
