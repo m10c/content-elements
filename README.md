@@ -39,6 +39,66 @@ Each block field can be rendered with a custom input by passing `renderers`
 (e.g. a rich-text or image-upload field for certain field kinds); otherwise a
 default input is used.
 
+For an editor with its own layout (e.g. a content piece with a title, summary,
+and free-form blocks), use the pieces `PageEditor` is built from:
+
+- **`BlocksField`** — the block list on its own. `canEditBlockList` lets editors
+  reorder and delete blocks; add new ones with `AddBlockDialog` and
+  `createBlock`. `blockComponents` swaps a block type's default form for your
+  own component, and `header`/`footer` add fixed cards (e.g. a
+  `BlockCardFrame`) around the list.
+- **`PreviewLayout`** and **`LivePreview`** — the editor/preview split and the
+  streaming preview iframe, without the block form.
+
+## Localisation
+
+Localised content is an **identity** with **variants** — one per value of a
+**dimension**, e.g. a variant per locale.
+
+Mount `VariantEditorProvider` once at the admin app's root, passing in its
+toasts and router:
+
+```typescript
+import { VariantEditorProvider } from '@m10c/content-elements';
+
+<VariantEditorProvider
+  callApi={callApi}
+  toast={toast}
+  push={(href) => router.push(href)}
+  getParams={getParams}
+  setParams={(next) => router.push(modifiedLink(next))}
+  defaultDimension={{
+    key: 'locale',
+    label: 'Language',
+    pluralLabel: 'Languages',
+    options: localeOptions,
+    translatable: true,
+  }}
+>
+```
+
+Then each screen calls `useVariantEditor` with the identity and its variants:
+
+```typescript
+import { useVariantEditor } from '@m10c/content-elements';
+
+const editor = useVariantEditor({
+  identityIri: content['@id'],
+  variantsPath: '/content-variants',
+  entityLabel: 'Content',
+  listPath: '/content',
+  variants,
+  toFormValues,
+});
+```
+
+It returns the selected variant (`editor.switcher`), a form that resets
+cleanly when switching between them (`editor.form`), an unsaved-changes guard,
+and save/publish/unpublish/delete/translate actions. The selected value is kept
+in the URL under the dimension's `key`. The layout is left to the screen;
+`DimensionSelect`, `ConfirmDialog`, and `UnsavedChangesDialog` cover the
+common parts.
+
 ## Website data fetching
 
 Fetch the page on the server, pass it to `useWebsitePageData` as `initialData`,
@@ -66,14 +126,3 @@ admin side is handled by `PageEditor`; the web side by `useWebsitePageData` — 
 
 The only requirement is that the admin's `previewUrl` is set to the web app's
 exact origin (matching scheme, host, and port), since that's the page the editor loads and sends edits to.
-
-### Authed previews
-
-A preview that calls authed APIs (e.g. a React Native web route) gets the
-admin's token over `postMessage`, never in the URL:
-
-- Admin: pass `getToken` to `usePreviewSender`. It answers token requests from
-  the preview iframe only (checked by origin and source).
-- Preview: `usePreviewAuth({ adminOrigin })` requests a token on mount and
-  returns `{ token, requestToken }`. Call `requestToken()` again when the token
-  expires (e.g. after a 401). Messages from any other origin are ignored.
