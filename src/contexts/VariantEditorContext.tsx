@@ -2,31 +2,17 @@
 
 import React from 'react';
 
-import type { CallApi, DimensionOption } from '../types';
+import type { VariantEditorConfig } from '../types';
 
-type VariantEditorContextValue = {
-  callApi: CallApi;
-  toast: {
-    success: (message: string) => void;
-    error: (message: string) => void;
-  };
-  push: (href: string) => void;
-  getParams: () => { locale?: string; ref?: string };
-  setParams: (next: { locale?: string; ref?: string | null }) => void;
-  dimensionOptions: readonly DimensionOption[];
-};
+const VariantEditorContext = React.createContext<VariantEditorConfig | null>(
+  null,
+);
 
-const VariantEditorContext =
-  React.createContext<VariantEditorContextValue | null>(null);
-
-type Props = VariantEditorContextValue & {
+type Props = VariantEditorConfig & {
   children: React.ReactNode;
 };
 
-export function VariantEditorProvider({
-  children,
-  ...value
-}: Props) {
+export function VariantEditorProvider({ children, ...value }: Props) {
   const memoed = React.useMemo(
     () => value,
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -36,7 +22,7 @@ export function VariantEditorProvider({
       value.push,
       value.getParams,
       value.setParams,
-      value.dimensionOptions,
+      value.defaultDimension,
     ],
   );
   return (
@@ -46,7 +32,7 @@ export function VariantEditorProvider({
   );
 }
 
-export function useVariantEditorContext(): VariantEditorContextValue {
+export function useVariantEditorContext(): VariantEditorConfig {
   const context = React.useContext(VariantEditorContext);
   if (!context) {
     throw new Error(

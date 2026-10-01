@@ -3,12 +3,9 @@
 import React from 'react';
 import type { FormObject } from 'react-typed-form';
 
-import type {
-  DimensionOption,
-  VariantBase,
-  VariantDetailBase,
-  VariantEntity,
-} from '../types';
+import { useVariantEditorContext } from '../contexts';
+import type { Dimension, VariantBase, VariantDetailBase } from '../types';
+import dimensionValue from '../utils/dimension-value';
 import useDimensionSwitcher, {
   type DimensionSwitcher,
 } from './use-dimension-switcher';
@@ -19,24 +16,21 @@ import useVariantActions, {
   type VariantActionHandlers,
 } from './use-variant-actions';
 import useVariantForm from './use-variant-form';
-import type { VariantUrlState } from './use-variant-url-state';
-
+import useVariantUrlState from './use-variant-url-state';
 
 export type UseVariantEditorOptions<
   V extends VariantBase,
   D extends VariantDetailBase,
   T extends Record<string, unknown>,
 > = {
-  entity: VariantEntity;
+  identityIri: string;
+  variantsPath: string;
+  entityLabel: string;
   listPath: string;
   variants: readonly V[];
-  getValue: (variant: V) => string;
-  dimensionField: string;
-  dimension: VariantUrlState;
-  options: readonly DimensionOption[];
-  defaultValue?: string;
   toFormValues: (detail: D | null) => T;
-  translatable?: boolean;
+  dimension?: Dimension;
+  publishable?: boolean;
 };
 
 export type VariantEditorState<
@@ -44,19 +38,23 @@ export type VariantEditorState<
   D extends VariantDetailBase,
   T extends Record<string, unknown>,
 > = {
-  entity: VariantEntity;
+  entityLabel: string;
+  dimension: Dimension;
   variants: readonly V[];
-  getValue: (variant: V) => string;
+  publishable: boolean;
   switcher: DimensionSwitcher<V, D>;
   form: FormObject<T>;
   guard: UnsavedChangesGuard;
-  actions: VariantActionHandlers<D>;
+  actions: VariantActionHandlers;
+  canTranslate: boolean;
+  isTranslating: boolean;
   isPublished: boolean;
   isNewVariant: boolean;
   isLastVariant: boolean;
   switchTo: (value: string) => void;
   save: () => Promise<boolean>;
   remove: () => Promise<boolean>;
+  bulkDelete: (iris: string[]) => Promise<boolean>;
   applyTranslation: (fields: string[]) => Promise<boolean>;
 };
 
@@ -65,41 +63,53 @@ export default function useVariantEditor<
   D extends VariantDetailBase,
   T extends Record<string, unknown>,
 >({
-  entity,
+  identityIri,
+  variantsPath,
+  entityLabel,
   listPath,
   variants,
-  getValue,
-  dimensionField,
-  dimension,
-  options,
-  defaultValue,
   toFormValues,
-  translatable = false,
+  dimension: dimensionOverride,
+  publishable = true,
 }: UseVariantEditorOptions<V, D, T>): VariantEditorState<V, D, T> {
-  const actions = useVariantActions<V, D>({
-    entity,
-    listPath,
-    variants,
-    getValue,
-    dimensionField,
-    value: dimension.value,
-  });
+  const { getParams, setParams, defaultDimension } = useVariantEditorContext();
+  const dimension = dimensionOverride ?? defaultDimension;
+  const firstVariant = variants[0];
+  const initialValue =
+    dimension.defaultValue ??
+    (firstVariant
+      ? dimensionValue(firstVariant, dimension.key)
+      : dimension.options[0]?.value);
+  if (!initialValue) {
+    throw new Error(`Dimension "${dimension.key}" has no options`);
+  }
 
+  const urlState = useVariantUrlState({
+    key: dimension.key,
+    params: getParams(),
+    defaultValue: initialValue,
+    navigate: setParams,
+  });
   const switcher = useDimensionSwitcher<V, D>({
+    dimension,
     variants,
-    options,
-    getValue,
-    value: dimension.value,
-    onValueChange: dimension.setValue,
-    reference: dimension.reference,
-    onReferenceChange: dimension.setReference,
-    showReference: dimension.showReference,
-    defaultValue,
-    fetchDetail: actions.fetchDetail,
-    translate: translatable ? actions.translate : undefined,
+    urlState,
+    publishable,
+  });
+  const { currentVariant, currentDetail, sourceVariant, value } = switcher;
+  const [isTranslating, setIsTranslating] = React.useState(false);
+
+  const actions = useVariantActions<V>({
+    identityIri,
+    variantsPath,
+    entityLabel,
+    listPath,
+    dimension,
+    variants,
+    value,
+    currentVariant,
   });
 
-  const { currentVariant, currentDetail } = switcher;
   const savedValues = React.useMemo(
     () => toFormValues(currentDetail),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,7 +118,7 @@ export default function useVariantEditor<
 
   const form = useVariantForm<T>({
     savedValues,
-    resetKey: `${currentVariant?.id ?? `new:${dimension.value}`}:${currentDetail?.updatedAt ?? ''}`,
+    resetKey: `${currentVariant?.['@id'] ?? `new:${value}`}:${currentDetail?.updatedAt ?? ''}`,
     onSubmit: async (values, { addSubmitError, setLoading }) => {
       const success = await actions.submit(values, {
         addSubmitError: (field, error) =>
@@ -125,39 +135,62 @@ export default function useVariantEditor<
     onSave: () => form.handleSubmit(),
   });
 
+  const switchAwayFromDeleted = (deletedIris: string[]) => {
+    if (!currentVariant || !deletedIris.includes(currentVariant['@id'])) return;
+    const remaining = variants.find(
+      (variant) => !deletedIris.includes(variant['@id']),
+    );
+    if (remaining) switcher.setValue(dimensionValue(remaining, dimension.key));
+  };
+
   const remove = async () => {
+    if (!currentVariant) return false;
     const success = await actions.remove();
-    if (!success) return false;
-    const remaining = variants.find((variant) => variant !== currentVariant);
-    if (remaining) switcher.setValue(getValue(remaining));
-    return true;
+    if (success) switchAwayFromDeleted([currentVariant['@id']]);
+    return success;
+  };
+
+  const bulkDelete = async (iris: string[]) => {
+    const success = await actions.bulkDelete(iris);
+    if (success) switchAwayFromDeleted(iris);
+    return success;
   };
 
   const applyTranslation = async (fields: string[]) => {
-    const translations = await switcher.translate(fields);
-    if (!translations) return false;
-    Object.entries(translations).forEach(([name, translated]) => {
-      form
-        .getField(name as keyof T)
-        .handleValueChange(translated as T[keyof T]);
-    });
-    return true;
+    if (!sourceVariant) return false;
+    setIsTranslating(true);
+    try {
+      const translations = await actions.translate(fields, sourceVariant);
+      if (!translations) return false;
+      Object.entries(translations).forEach(([name, translated]) => {
+        form
+          .getField(name as keyof T)
+          .handleValueChange(translated as T[keyof T]);
+      });
+      return true;
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   return {
-    entity,
+    entityLabel,
+    dimension,
     variants,
-    getValue,
+    publishable,
     switcher,
     form,
     guard,
     actions,
+    canTranslate: Boolean(dimension.translatable) && sourceVariant !== null,
+    isTranslating,
     isPublished: currentVariant?.publishAt != null,
     isNewVariant: currentVariant === null,
     isLastVariant: variants.length === 1,
-    switchTo: (value) => guard.guard(() => switcher.setValue(value)),
+    switchTo: (next) => guard.guard(() => switcher.setValue(next)),
     save: () => form.handleSubmit(),
     remove,
+    bulkDelete,
     applyTranslation,
   };
 }

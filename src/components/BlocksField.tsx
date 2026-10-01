@@ -26,9 +26,12 @@ import { FieldProp } from 'react-typed-form';
 
 import useDragReorder from '../hooks/use-drag-reorder';
 import useDraggableByHandle from '../hooks/use-draggable-by-handle';
-import { emptyFieldValue, moveItem } from '../utils';
+import emptyFieldValue from '../utils/empty-field-value';
+import moveItem from '../utils/move-item';
+import BlockCardFrame from './BlockCardFrame';
 import ConfirmDialog from './ConfirmDialog';
 import type {
+  BlockComponentProps,
   DragRowProps,
   Block,
   BlockErrors,
@@ -56,9 +59,11 @@ type Props = {
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
   errors?: BlockErrors;
+  blockComponents?: Record<string, React.ComponentType<BlockComponentProps>>;
   canEditBlockList?: boolean;
   header?: React.ReactNode;
   footer?: React.ReactNode;
+  emptyState?: React.ReactNode;
 };
 
 export default function BlocksField({
@@ -68,9 +73,11 @@ export default function BlocksField({
   previews,
   icons,
   errors,
+  blockComponents,
   canEditBlockList = false,
   header,
   footer,
+  emptyState,
 }: Props) {
   const blocks = field.value ?? [];
   const [pendingDeleteIndex, setPendingDeleteIndex] = React.useState<
@@ -113,13 +120,15 @@ export default function BlocksField({
 
   return (
     <>
-      <Stack spacing={2}>
+      <Stack spacing={canEditBlockList ? 3 : 2}>
         {header}
+        {blocks.length === 0 && emptyState}
         {blocks.map((block, index) => (
           <BlockCard
             key={keysRef.current[index]}
             block={block}
             blockType={blockTypesByKey[block.type]}
+            component={blockComponents?.[block.type]}
             renderers={renderers}
             previews={previews}
             icons={icons}
@@ -152,6 +161,7 @@ export default function BlocksField({
 type BlockCardProps = {
   block: Block;
   blockType: BlockType | undefined;
+  component?: React.ComponentType<BlockComponentProps>;
   renderers?: BlockFieldRenderers;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
@@ -165,6 +175,7 @@ type BlockCardProps = {
 function BlockCard({
   block,
   blockType,
+  component: BlockComponent,
   renderers,
   previews,
   icons,
@@ -175,6 +186,8 @@ function BlockCard({
   onDelete,
 }: BlockCardProps) {
   const { isDraggable, stopDragging, handleProps } = useDraggableByHandle();
+  const [headerActionContainer, setHeaderActionContainer] =
+    React.useState<HTMLElement | null>(null);
 
   function updateData(key: string, value: unknown) {
     onChange({ ...block, data: { ...block.data, [key]: value } });
@@ -216,48 +229,17 @@ function BlockCard({
 
   const showLabel = !blockType?.hideLabel;
 
-  return (
-    <Card
-      draggable={isDraggable}
-      onDragStart={dragProps?.onDragStart}
-      onDragEnd={() => {
-        stopDragging();
-        dragProps?.onDragEnd();
-      }}
-      onDragOver={dragProps?.onDragOver}
-      onDrop={dragProps?.onDrop}
-    >
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack spacing={2}>
-          {(showLabel || dragProps || onDelete) && (
-            <Stack direction="row" alignItems="center" spacing={1}>
-              {dragProps && (
-                <Box
-                  {...handleProps}
-                  sx={{ display: 'flex', color: 'primary.main', cursor: 'grab' }}
-                >
-                  {icons?.drag ?? <DragIndicatorIcon fontSize="small" />}
-                </Box>
-              )}
-              <Box sx={{ flex: 1 }}>
-                {showLabel && (
-                  <Typography variant="subtitle1">
-                    {blockType?.label ?? `Unknown block: ${block.type}`}
-                  </Typography>
-                )}
-              </Box>
-              {onDelete && (
-                <IconButton
-                  size="small"
-                  onClick={onDelete}
-                  aria-label="Delete block"
-                >
-                  {icons?.delete ?? <DeleteOutlineIcon fontSize="small" />}
-                </IconButton>
-              )}
-            </Stack>
-          )}
-          {blockType ? (
+  const label = blockType?.label ?? `Unknown block: ${block.type}`;
+  const body = BlockComponent ? (
+    <BlockComponent
+      block={block}
+      onChange={(data) => onChange({ ...block, data })}
+      errors={errors}
+      errorPath={errorPath}
+      headerActionContainer={headerActionContainer}
+    />
+  ) : (
+    blockType ? (
             Object.entries(blockType.fields)
               .filter(([key]) => !headerFieldKeys.has(key))
               .map(([key, fieldDef]) => (
@@ -279,7 +261,57 @@ function BlockCard({
             <Typography variant="body2" color="text.secondary">
               No schema registered for block type &quot;{block.type}&quot;.
             </Typography>
-          )}
+          )
+  );
+
+  if (dragProps || onDelete) {
+    return (
+      <BlockCardFrame
+        draggable={isDraggable}
+        onDragStart={dragProps?.onDragStart}
+        onDragEnd={() => {
+          stopDragging();
+          dragProps?.onDragEnd();
+        }}
+        onDragOver={dragProps?.onDragOver}
+        onDrop={dragProps?.onDrop}
+        gutter={
+          dragProps && (
+            <Box
+              {...handleProps}
+              sx={{ display: 'flex', color: 'primary.main', cursor: 'grab' }}
+            >
+              {icons?.drag ?? <DragIndicatorIcon />}
+            </Box>
+          )
+        }
+        title={showLabel ? label : undefined}
+        action={
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Box ref={setHeaderActionContainer} sx={{ display: 'flex' }} />
+            {onDelete && (
+              <IconButton
+                size="small"
+                onClick={onDelete}
+                aria-label="Delete block"
+              >
+                {icons?.delete ?? <DeleteOutlineIcon />}
+              </IconButton>
+            )}
+          </Stack>
+        }
+      >
+        {body}
+      </BlockCardFrame>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+        <Stack spacing={2}>
+          {showLabel && <Typography variant="subtitle1">{label}</Typography>}
+          {body}
         </Stack>
       </CardContent>
     </Card>

@@ -1,4 +1,4 @@
 export {
-  VariantEditorProvider,
   useVariantEditorContext,
+  VariantEditorProvider,
 } from './VariantEditorContext';

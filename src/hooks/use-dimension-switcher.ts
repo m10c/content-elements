@@ -1,211 +1,141 @@
 'use client';
 
-import { format, isFuture, parseISO } from 'date-fns';
-import React from 'react';
+import { useApiRead } from 'api-read-hook';
 
 import type {
+  Dimension,
   DimensionChip,
-  DimensionOption,
-  Translate,
-  Translations,
   VariantBase,
+  VariantDetailBase,
 } from '../types';
+import dimensionValue from '../utils/dimension-value';
+import publishStatusChip from '../utils/publish-status-chip';
+import type { VariantUrlState } from './use-variant-url-state';
 
-
-type FetchDetail<D> = (variant: {
-  id: string;
-  value: string;
-}) => Promise<D | null>;
-
-type UseDimensionSwitcherOptions<V extends VariantBase, D> = {
+type Options<V extends VariantBase> = {
+  dimension: Dimension;
   variants: readonly V[];
-  options: readonly DimensionOption[];
-  getValue: (variant: V) => string;
-  value: string;
-  onValueChange: (value: string) => void;
-  reference: string | null;
-  onReferenceChange: (reference: string | null) => void;
-  showReference: boolean;
-  defaultValue?: string;
-  fetchDetail: FetchDetail<D>;
-  translate?: Translate;
-  showPublishChip?: boolean;
+  urlState: VariantUrlState;
+  publishable?: boolean;
 };
 
-export type DimensionSwitcher<V extends VariantBase, D> = {
+export type DimensionSwitcher<
+  V extends VariantBase,
+  D extends VariantDetailBase,
+> = {
+  dimension: Dimension;
   value: string;
   reference: string | null;
   showReference: boolean;
   shouldShowReferenceToggle: boolean;
-  defaultValue: string | null;
   isDefault: boolean;
-
   currentVariant: V | null;
   referenceVariant: V | null;
   sourceVariant: V | null;
   currentDetail: D | null;
   referenceDetail: D | null;
   isLoadingDetail: boolean;
+  hasDetailError: boolean;
   reloadDetail: () => void;
-
-  options: readonly DimensionOption[];
   setValue: (value: string) => void;
   setReference: (reference: string | null) => void;
   toggleReference: () => void;
+  getLabel: (value: string) => string;
   getChips: (value: string) => DimensionChip[];
-
-  canTranslate: boolean;
-  translatingField: string | null;
-  translate: (fields: string[]) => Promise<Translations | null>;
 };
 
-export default function useDimensionSwitcher<V extends VariantBase, D>({
-  variants,
-  options,
-  getValue,
-  value,
-  onValueChange,
-  reference,
-  onReferenceChange,
-  showReference,
-  defaultValue,
-  fetchDetail,
-  translate: translateFn,
-  showPublishChip = true,
-}: UseDimensionSwitcherOptions<V, D>): DimensionSwitcher<V, D> {
-  const [translatingField, setTranslatingField] = React.useState<
-    string | null
-  >(null);
-  const [reloadCount, setReloadCount] = React.useState(0);
-  const [currentDetailState, setCurrentDetailState] = React.useState<{
-    value: string;
-    data: D;
-  } | null>(null);
-  const [referenceDetailState, setReferenceDetailState] = React.useState<{
-    value: string;
-    data: D;
-  } | null>(null);
+function useVariantDetail<D extends VariantDetailBase>(
+  variant: VariantBase | null,
+) {
+  const read = useApiRead<D>(variant?.['@id'] ?? null, {
+    staleWhileInvalidated: true,
+  });
+  // useApiRead returns the previous path's data for one render after the path changes
+  const detail =
+    read.data && read.data['@id'] === variant?.['@id'] ? read.data : null;
+  return { detail, error: read.error, reload: read.invalidate };
+}
 
-  const findVariant = (dimensionValue: string | null | undefined) =>
-    dimensionValue == null
+export default function useDimensionSwitcher<
+  V extends VariantBase,
+  D extends VariantDetailBase,
+>({
+  dimension,
+  variants,
+  urlState,
+  publishable = true,
+}: Options<V>): DimensionSwitcher<V, D> {
+  const { value, reference, showReference } = urlState;
+
+  const findVariant = (target: string | null | undefined) =>
+    target == null
       ? null
-      : (variants.find((variant) => getValue(variant) === dimensionValue) ??
-        null);
+      : (variants.find(
+          (variant) => dimensionValue(variant, dimension.key) === target,
+        ) ?? null);
 
   const currentVariant = findVariant(value);
-  const referenceVariant = findVariant(reference);
-  const defaultVariant = findVariant(defaultValue);
-
-  const currentDetail =
-    currentDetailState && currentDetailState.value === value && currentVariant
-      ? currentDetailState.data
-      : null;
-  const referenceDetail =
-    referenceDetailState &&
-    reference != null &&
-    referenceDetailState.value === reference &&
-    referenceVariant
-      ? referenceDetailState.data
-      : null;
-  const isLoadingDetail = currentVariant !== null && currentDetail === null;
-
+  const referenceVariant = showReference ? findVariant(reference) : null;
+  const defaultVariant = findVariant(dimension.defaultValue);
   const otherVariants = variants.filter(
-    (variant) => getValue(variant) !== value,
+    (variant) => variant !== currentVariant,
   );
   const onlyOtherVariant =
     otherVariants.length === 1 ? (otherVariants[0] ?? null) : null;
   const sourceVariant =
-    referenceVariant ??
-    (defaultVariant && defaultVariant !== currentVariant
-      ? defaultVariant
-      : null) ??
+    (referenceVariant !== currentVariant ? referenceVariant : null) ??
+    (defaultVariant !== currentVariant ? defaultVariant : null) ??
     onlyOtherVariant;
-  const canTranslate = Boolean(translateFn && sourceVariant);
 
-  const shouldShowReferenceToggle =
-    otherVariants.length >= 1 || (showReference && reference !== value);
+  const current = useVariantDetail<D>(currentVariant);
+  const referenceRead = useVariantDetail<D>(referenceVariant);
+  const hasDetailError =
+    current.detail === null && current.error !== undefined;
 
-  const translate = React.useCallback(
-    async (fields: string[]): Promise<Translations | null> => {
-      if (!translateFn || !sourceVariant) return null;
-      setTranslatingField(fields.length === 1 ? (fields[0] ?? 'all') : 'all');
-      try {
-        return await translateFn(fields, {
-          id: sourceVariant.id,
-          value: getValue(sourceVariant),
-        });
-      } finally {
-        setTranslatingField(null);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [translateFn, sourceVariant?.id],
-  );
+  const getLabel = (target: string) =>
+    dimension.options.find((option) => option.value === target)?.label ??
+    target;
 
-  const toggleReference = () => {
-    if (showReference) {
-      onReferenceChange(null);
-    } else {
-      onReferenceChange(onlyOtherVariant ? getValue(onlyOtherVariant) : '_');
-    }
-  };
-
-  const getChips = (optionValue: string): DimensionChip[] => {
+  const getChips = (target: string) => {
     const chips: DimensionChip[] = [];
-    if (defaultValue === optionValue) {
+    if (target === dimension.defaultValue) {
       chips.push({ label: 'Default', color: 'default' });
     }
-    const variant = findVariant(optionValue);
-    if (!showPublishChip || !variant) return chips;
-    if (!variant.publishAt) {
-      chips.push({ label: 'Draft', color: 'warning' });
-      return chips;
-    }
-    const publishDate = parseISO(variant.publishAt);
-    chips.push({
-      label: format(publishDate, 'dd MMM yyyy'),
-      color: isFuture(publishDate) ? 'info' : 'success',
-    });
+    const variant = findVariant(target);
+    if (publishable && variant) chips.push(publishStatusChip(variant.publishAt));
     return chips;
   };
 
-  React.useEffect(() => {
-    if (!currentVariant) return;
-    fetchDetail({ id: currentVariant.id, value }).then((data) => {
-      if (data) setCurrentDetailState({ value, data });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentVariant?.id, value, reloadCount]);
-
-  React.useEffect(() => {
-    if (!referenceVariant || !showReference || reference == null) return;
-    fetchDetail({ id: referenceVariant.id, value: reference }).then((data) => {
-      if (data) setReferenceDetailState({ value: reference, data });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [referenceVariant?.id, reference, showReference]);
+  const toggleReference = () => {
+    if (showReference) {
+      urlState.closeReference();
+    } else {
+      urlState.setReference(
+        onlyOtherVariant ? dimensionValue(onlyOtherVariant, dimension.key) : null,
+      );
+    }
+  };
 
   return {
+    dimension,
     value,
-    reference: showReference ? reference : null,
+    reference,
     showReference,
-    shouldShowReferenceToggle,
-    defaultValue: defaultValue ?? null,
-    isDefault: defaultValue === value,
+    shouldShowReferenceToggle: otherVariants.length > 0,
+    isDefault: value === dimension.defaultValue,
     currentVariant,
     referenceVariant,
     sourceVariant,
-    currentDetail,
-    referenceDetail,
-    isLoadingDetail,
-    reloadDetail: () => setReloadCount((count) => count + 1),
-    options,
-    setValue: onValueChange,
-    setReference: onReferenceChange,
+    currentDetail: current.detail,
+    referenceDetail: referenceRead.detail,
+    isLoadingDetail:
+      currentVariant !== null && current.detail === null && !hasDetailError,
+    hasDetailError,
+    reloadDetail: current.reload,
+    setValue: urlState.setValue,
+    setReference: urlState.setReference,
     toggleReference,
+    getLabel,
     getChips,
-    canTranslate,
-    translatingField,
-    translate,
   };
 }

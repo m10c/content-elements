@@ -3,28 +3,28 @@
 import { useInvalidation } from 'api-read-hook';
 
 import { useVariantEditorContext } from '../contexts';
-import type {
-  SubmitHelpers,
-  Translations,
-  VariantBase,
-  VariantEntity,
-} from '../types';
+import type { Dimension, Translations, VariantBase } from '../types';
 
-type UseVariantActionsOptions<V extends VariantBase> = {
-  entity: VariantEntity;
-  listPath: string;
-  variants: readonly V[];
-  getValue: (variant: V) => string;
-  dimensionField: string;
-  value: string;
+type SubmitHelpers = {
+  addSubmitError: (field: string, error: string) => void;
+  setLoading: (loading: boolean) => void;
 };
 
-export type VariantActionHandlers<D> = {
+type Options<V extends VariantBase> = {
   identityIri: string;
-  fetchDetail: (variant: { id: string }) => Promise<D | null>;
+  variantsPath: string;
+  entityLabel: string;
+  listPath: string;
+  dimension: Dimension;
+  variants: readonly V[];
+  value: string;
+  currentVariant: V | null;
+};
+
+export type VariantActionHandlers = {
   translate: (
     fields: string[],
-    source: { id: string },
+    source: VariantBase,
   ) => Promise<Translations | null>;
   submit: (
     values: Record<string, unknown>,
@@ -33,55 +33,52 @@ export type VariantActionHandlers<D> = {
   publish: (publishAt: string) => Promise<boolean>;
   unpublish: () => Promise<boolean>;
   remove: () => Promise<boolean>;
-  bulkPublish: (ids: string[], publishAt: string) => Promise<boolean>;
-  bulkUnpublish: (ids: string[]) => Promise<boolean>;
-  bulkDelete: (ids: string[]) => Promise<boolean>;
+  bulkPublish: (iris: string[], publishAt: string) => Promise<boolean>;
+  bulkUnpublish: (iris: string[]) => Promise<boolean>;
+  bulkDelete: (iris: string[]) => Promise<boolean>;
   invalidate: () => void;
 };
 
-export default function useVariantActions<V extends VariantBase, D>({
-  entity,
+export default function useVariantActions<V extends VariantBase>({
+  identityIri,
+  variantsPath,
+  entityLabel,
   listPath,
+  dimension,
   variants,
-  getValue,
-  dimensionField,
   value,
-}: UseVariantActionsOptions<V>): VariantActionHandlers<D> {
+  currentVariant,
+}: Options<V>): VariantActionHandlers {
   const { callApi, toast, push } = useVariantEditorContext();
   const { invalidateMatching } = useInvalidation();
 
-  const { slug, identityId, entityLabel } = entity;
-  const collection = entity.identityCollection ?? `${slug}s`;
-  const identityIri = `/${collection}/${identityId}`;
-  const variantsPath = `/${slug}-variants`;
-  const currentVariant =
-    variants.find((variant) => getValue(variant) === value) ?? null;
-
   const invalidate = () => invalidateMatching(identityIri);
+  const countLabel = (count: number) =>
+    `${count} ${(count === 1 ? dimension.label : dimension.pluralLabel).toLowerCase()}`;
 
-  const runAll = async (paths: string[], method: 'POST' | 'DELETE', body?: unknown) => {
-    const results = await Promise.all(
-      paths.map((path) =>
-        callApi(path, { method, jsonBody: method === 'POST' ? body : undefined }),
-      ),
-    );
-    return results.every(Boolean);
+  const runEach = async (
+    iris: string[],
+    request: (iri: string) => Promise<unknown>,
+    pastTense: string,
+  ) => {
+    let failedCount = 0;
+    // Sequential, so the backend's "delete identity with its last variant" check sees an accurate count
+    for (const iri of iris) {
+      if (!(await request(iri))) failedCount += 1;
+    }
+    if (failedCount < iris.length) invalidate();
+    if (failedCount > 0) {
+      toast.error(`${countLabel(failedCount)} failed`);
+    } else {
+      toast.success(`${countLabel(iris.length)} ${pastTense}`);
+    }
+    return failedCount === 0;
   };
 
-  const plural = (count: number) =>
-    `${count} ${count === 1 ? 'language' : 'languages'}`;
-
   return {
-    identityIri,
-
-    fetchDetail: async ({ id }) => {
-      const response = await callApi<D>(`${variantsPath}/${id}`);
-      return response?.data ?? null;
-    },
-
     translate: async (fields, source) => {
       const response = await callApi<{ translations: Translations }>(
-        `${variantsPath}/${source.id}/translate`,
+        `${source['@id']}/translate`,
         { method: 'POST', jsonBody: { targetLocale: value, fields } },
       );
       return response?.data.translations ?? null;
@@ -91,7 +88,7 @@ export default function useVariantActions<V extends VariantBase, D>({
       setLoading(true);
       const response = currentVariant
         ? await callApi(
-            `${variantsPath}/${currentVariant.id}`,
+            currentVariant['@id'],
             { method: 'PATCH', jsonBody: values },
             { addSubmitError },
           )
@@ -102,7 +99,7 @@ export default function useVariantActions<V extends VariantBase, D>({
               jsonBody: {
                 ...values,
                 identity: identityIri,
-                [dimensionField]: value,
+                [dimension.key]: value,
               },
             },
             { addSubmitError },
@@ -116,10 +113,10 @@ export default function useVariantActions<V extends VariantBase, D>({
 
     publish: async (publishAt) => {
       if (!currentVariant) return false;
-      const response = await callApi(
-        `${variantsPath}/${currentVariant.id}/publish`,
-        { method: 'POST', jsonBody: { publishAt } },
-      );
+      const response = await callApi(`${currentVariant['@id']}/publish`, {
+        method: 'POST',
+        jsonBody: { publishAt },
+      });
       if (!response) return false;
       toast.success(`${entityLabel} published`);
       invalidate();
@@ -128,10 +125,10 @@ export default function useVariantActions<V extends VariantBase, D>({
 
     unpublish: async () => {
       if (!currentVariant) return false;
-      const response = await callApi(
-        `${variantsPath}/${currentVariant.id}/unpublish`,
-        { method: 'POST', jsonBody: {} },
-      );
+      const response = await callApi(`${currentVariant['@id']}/unpublish`, {
+        method: 'POST',
+        jsonBody: {},
+      });
       if (!response) return false;
       toast.success(`${entityLabel} unpublished`);
       invalidate();
@@ -140,8 +137,7 @@ export default function useVariantActions<V extends VariantBase, D>({
 
     remove: async () => {
       if (!currentVariant) return false;
-      const isLast = variants.length === 1;
-      const response = await callApi(`${variantsPath}/${currentVariant.id}`, {
+      const response = await callApi(currentVariant['@id'], {
         method: 'DELETE',
       });
       if (!response) {
@@ -149,48 +145,33 @@ export default function useVariantActions<V extends VariantBase, D>({
         return false;
       }
       toast.success(`${entityLabel} deleted`);
-      if (isLast) push(listPath);
+      if (variants.length === 1) push(listPath);
       else invalidate();
       return true;
     },
 
-    bulkPublish: async (ids, publishAt) => {
-      const success = await runAll(
-        ids.map((id) => `${variantsPath}/${id}/publish`),
-        'POST',
-        { publishAt },
-      );
-      if (success) {
-        toast.success(`${plural(ids.length)} published`);
-        invalidate();
-      }
-      return success;
-    },
+    bulkPublish: (iris, publishAt) =>
+      runEach(
+        iris,
+        (iri) =>
+          callApi(`${iri}/publish`, { method: 'POST', jsonBody: { publishAt } }),
+        'published',
+      ),
 
-    bulkUnpublish: async (ids) => {
-      const success = await runAll(
-        ids.map((id) => `${variantsPath}/${id}/unpublish`),
-        'POST',
-        {},
-      );
-      if (success) {
-        toast.success(`${plural(ids.length)} unpublished`);
-        invalidate();
-      }
-      return success;
-    },
+    bulkUnpublish: (iris) =>
+      runEach(
+        iris,
+        (iri) => callApi(`${iri}/unpublish`, { method: 'POST', jsonBody: {} }),
+        'unpublished',
+      ),
 
-    bulkDelete: async (ids) => {
-      const isDeletingAll = ids.length === variants.length;
-      const success = await runAll(
-        ids.map((id) => `${variantsPath}/${id}`),
-        'DELETE',
+    bulkDelete: async (iris) => {
+      const success = await runEach(
+        iris,
+        (iri) => callApi(iri, { method: 'DELETE' }),
+        'deleted',
       );
-      if (success) {
-        toast.success(`${plural(ids.length)} deleted`);
-        if (isDeletingAll) push(listPath);
-        else invalidate();
-      }
+      if (success && iris.length === variants.length) push(listPath);
       return success;
     },
 

@@ -2,6 +2,7 @@
 
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -23,37 +24,35 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
-import type { FieldProp, FormObject } from 'react-typed-form';
+import type { FieldProp } from 'react-typed-form';
 
-import type { DimensionSwitcher } from '../hooks/use-dimension-switcher';
-import type { DimensionOption, VariantBase } from '../types';
+import type { VariantEditorState } from '../hooks/use-variant-editor';
+import type { VariantBase, VariantDetailBase } from '../types';
 import DimensionSelect from './DimensionSelect';
 import VariantField, { type VariantFieldProps } from './VariantField';
 
-type Props<T extends Record<string, unknown>> = {
-  form: FormObject<T>;
+type Props<
+  V extends VariantBase,
+  D extends VariantDetailBase,
+  T extends Record<string, unknown>,
+> = {
+  editor: VariantEditorState<V, D, T>;
   children: ReactNode;
-  switcher?: DimensionSwitcher<VariantBase, Record<string, unknown>>;
-  options?: readonly DimensionOption[];
-  onSwitchGuard?: (action: () => void) => void;
-  dimensionField?: string;
-  dimensionLabel?: string;
 };
 
-const lastUpdated = (detail: { updatedAt?: string } | null) =>
+const lastUpdated = (detail: VariantDetailBase | null) =>
   detail?.updatedAt
     ? format(parseISO(detail.updatedAt), 'dd MMM yyyy, HH:mm')
     : '-';
 
-export default function VariantTable<T extends Record<string, unknown>>({
-  form,
-  children,
-  switcher,
-  options: optionsProp,
-  onSwitchGuard,
-  dimensionField = 'locale',
-  dimensionLabel = 'Language',
-}: Props<T>) {
+export default function VariantTable<
+  V extends VariantBase,
+  D extends VariantDetailBase,
+  T extends Record<string, unknown>,
+>({ editor, children }: Props<V, D, T>) {
+  const { form, switcher, dimension } = editor;
+  const { showReference } = switcher;
+
   const fields = Children.toArray(children)
     .filter(
       (child): child is ReactElement<VariantFieldProps> =>
@@ -61,24 +60,11 @@ export default function VariantTable<T extends Record<string, unknown>>({
     )
     .map((child) => child.props);
 
-  const options = switcher?.options ?? optionsProp ?? [];
-
-  const showReference = switcher?.showReference ?? false;
   const referenceWidth = showReference ? '50%' : 'auto';
-  const referenceRecord =
-    (switcher?.referenceDetail as Record<string, unknown> | null) ?? null;
-  const isLoadingDetail = switcher?.isLoadingDetail ?? false;
-  const currentDetail =
-    (switcher?.currentDetail as { updatedAt?: string } | null) ?? null;
-
-  const handleTranslate = async (names: string[]) => {
-    if (!switcher) return;
-    const translations = await switcher.translate(names);
-    if (!translations) return;
-    Object.entries(translations).forEach(([name, translated]) => {
-      form.getField(name as keyof T).handleValueChange(translated as T[keyof T]);
-    });
-  };
+  const referenceRecord = switcher.referenceDetail as Record<
+    string,
+    unknown
+  > | null;
 
   const translatableNames = fields
     .filter((field) => field.translatable)
@@ -87,27 +73,30 @@ export default function VariantTable<T extends Record<string, unknown>>({
     Boolean(form.getField(name as keyof T).value),
   );
 
-  const dimensionFormField = form.getField(
-    dimensionField as keyof T,
-  ) as FieldProp<string>;
-  const dimensionValue = switcher ? switcher.value : dimensionFormField.value ?? '';
-  const onDimensionChange = (next: string) => {
-    if (!switcher) {
-      dimensionFormField.handleValueChange(next);
-    } else if (onSwitchGuard) {
-      onSwitchGuard(() => switcher.setValue(next));
-    } else {
-      switcher.setValue(next);
-    }
-  };
-
-  if (switcher && isLoadingDetail && !switcher.currentDetail) {
+  if (switcher.isLoadingDetail || switcher.hasDetailError) {
     return (
       <Card sx={{ maxWidth: 'xl', mx: 'auto' }}>
         <CardContent>
-          <Stack alignItems="center" sx={{ py: 4 }}>
-            <CircularProgress size={24} />
-          </Stack>
+          {switcher.hasDetailError ? (
+            <Alert
+              severity="error"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={switcher.reloadDetail}
+                >
+                  Retry
+                </Button>
+              }
+            >
+              Failed to load this {editor.entityLabel}.
+            </Alert>
+          ) : (
+            <Stack alignItems="center" sx={{ py: 4 }}>
+              <CircularProgress size={24} />
+            </Stack>
+          )}
         </CardContent>
       </Card>
     );
@@ -128,11 +117,11 @@ export default function VariantTable<T extends Record<string, unknown>>({
                     alignItems="center"
                     justifyContent="space-between"
                   >
-                    Reference Locale
+                    Reference {dimension.label}
                     <MuiLink
                       component="button"
                       type="button"
-                      onClick={switcher?.toggleReference}
+                      onClick={switcher.toggleReference}
                       sx={{ cursor: 'pointer', textDecoration: 'none' }}
                     >
                       <Typography variant="body2" color="primary">
@@ -143,7 +132,7 @@ export default function VariantTable<T extends Record<string, unknown>>({
                 </TableCell>
               )}
               <TableCell sx={{ width: referenceWidth }}>
-                {switcher?.shouldShowReferenceToggle && !showReference && (
+                {switcher.shouldShowReferenceToggle && !showReference && (
                   <Box sx={{ position: 'absolute', right: 20, top: 8 }}>
                     <MuiLink
                       component="button"
@@ -154,7 +143,7 @@ export default function VariantTable<T extends Record<string, unknown>>({
                       <Stack direction="row" spacing={1} alignItems="center">
                         <ViewColumnIcon sx={{ fontSize: 16 }} />
                         <Typography variant="body2" color="primary">
-                          Show reference locale
+                          Show reference {dimension.label.toLowerCase()}
                         </Typography>
                       </Stack>
                     </MuiLink>
@@ -167,32 +156,32 @@ export default function VariantTable<T extends Record<string, unknown>>({
           <TableBody>
             <TableRow>
               <TableCell sx={{ minWidth: 120, width: 120 }}>
-                {dimensionLabel}
+                {dimension.label}
               </TableCell>
               {showReference && (
                 <TableCell sx={{ width: '50%' }}>
                   <DimensionSelect
-                    value={switcher?.reference ?? ''}
-                    onChange={(next) => switcher?.setReference(next)}
-                    options={options}
-                    placeholder="Select language"
-                    getChips={switcher?.getChips}
+                    value={switcher.reference ?? ''}
+                    onChange={switcher.setReference}
+                    options={dimension.options}
+                    placeholder={`Select ${dimension.label.toLowerCase()}`}
+                    getChips={switcher.getChips}
                   />
                 </TableCell>
               )}
               <TableCell sx={{ width: referenceWidth }}>
                 <Stack spacing={1}>
                   <DimensionSelect
-                    value={dimensionValue}
-                    onChange={onDimensionChange}
-                    options={options}
-                    getChips={switcher?.getChips}
+                    value={switcher.value}
+                    onChange={editor.switchTo}
+                    options={dimension.options}
+                    getChips={switcher.getChips}
                   />
-                  {switcher?.canTranslate && translatableNames.length > 0 && (
+                  {editor.canTranslate && translatableNames.length > 0 && (
                     <Button
                       variant="contained"
-                      onClick={() => handleTranslate([])}
-                      disabled={switcher.translatingField !== null}
+                      onClick={() => editor.applyTranslation(translatableNames)}
+                      disabled={editor.isTranslating}
                       sx={{ alignSelf: 'flex-start' }}
                     >
                       {hasAnyValue
@@ -204,31 +193,25 @@ export default function VariantTable<T extends Record<string, unknown>>({
               </TableCell>
             </TableRow>
 
-            {switcher && (
-              <TableRow>
-                <TableCell sx={{ minWidth: 120, width: 120 }}>
-                  Last Updated
-                </TableCell>
-                {showReference && (
-                  <TableCell sx={{ width: '50%' }}>
-                    <Typography variant="body2">
-                      {lastUpdated(
-                        switcher.referenceDetail as { updatedAt?: string } | null,
-                      )}
-                    </Typography>
-                  </TableCell>
-                )}
-                <TableCell sx={{ width: referenceWidth }}>
+            <TableRow>
+              <TableCell sx={{ minWidth: 120, width: 120 }}>
+                Last Updated
+              </TableCell>
+              {showReference && (
+                <TableCell sx={{ width: '50%' }}>
                   <Typography variant="body2">
-                    {lastUpdated(currentDetail)}
+                    {lastUpdated(switcher.referenceDetail)}
                   </Typography>
                 </TableCell>
-              </TableRow>
-            )}
+              )}
+              <TableCell sx={{ width: referenceWidth }}>
+                <Typography variant="body2">
+                  {lastUpdated(switcher.currentDetail)}
+                </Typography>
+              </TableCell>
+            </TableRow>
 
             {fields.map((field) => {
-              const showFieldTranslate =
-                (switcher?.canTranslate ?? false) && field.translatable;
               const formField = form.getField(
                 field.name as keyof T,
               ) as FieldProp<string>;
@@ -250,25 +233,21 @@ export default function VariantTable<T extends Record<string, unknown>>({
                     </TableCell>
                   )}
                   <TableCell sx={{ width: referenceWidth }}>
-                    {isLoadingDetail ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      <Stack spacing={1}>
-                        {field.children(formField)}
-                        {showFieldTranslate && (
-                          <Button
-                            variant="outlined"
-                            onClick={() => handleTranslate([field.name])}
-                            disabled={switcher?.translatingField !== null}
-                            sx={{ alignSelf: 'flex-start' }}
-                          >
-                            {formField.value
-                              ? 'Retranslate with AI'
-                              : 'Translate with AI'}
-                          </Button>
-                        )}
-                      </Stack>
-                    )}
+                    <Stack spacing={1}>
+                      {field.children(formField)}
+                      {editor.canTranslate && field.translatable && (
+                        <Button
+                          variant="outlined"
+                          onClick={() => editor.applyTranslation([field.name])}
+                          disabled={editor.isTranslating}
+                          sx={{ alignSelf: 'flex-start' }}
+                        >
+                          {formField.value
+                            ? 'Retranslate with AI'
+                            : 'Translate with AI'}
+                        </Button>
+                      )}
+                    </Stack>
                   </TableCell>
                 </TableRow>
               );

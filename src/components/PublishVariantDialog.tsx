@@ -1,7 +1,6 @@
 'use client';
 
 import { FieldDateTime, FormWrap, SubmitButton } from '@m10c/mui-kit';
-import TranslateIcon from '@mui/icons-material/Translate';
 import {
   Alert,
   Button,
@@ -11,12 +10,13 @@ import {
   DialogTitle,
   Divider,
   Stack,
-  SvgIcon,
   Typography,
 } from '@mui/material';
 import { addDays, formatISO, setHours, setMinutes } from 'date-fns';
 import type React from 'react';
 import { useForm } from 'react-typed-form';
+
+import DimensionSubtitle from './DimensionSubtitle';
 
 type Props = {
   open: boolean;
@@ -59,18 +59,9 @@ export default function PublishVariantDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+      <DialogTitle component="div">
         <Typography variant="subtitle1">Publish {entityLabel}</Typography>
-        {dimensionLabel && (
-          <Stack direction="row" gap={1} alignItems="center" sx={{ mt: 0.5 }}>
-            <SvgIcon sx={{ fontSize: 20, color: 'text.secondary' }}>
-              <TranslateIcon />
-            </SvgIcon>
-            <Typography variant="body2" color="text.secondary">
-              in {dimensionLabel}
-            </Typography>
-          </Stack>
-        )}
+        {dimensionLabel && <DimensionSubtitle label={dimensionLabel} />}
       </DialogTitle>
       <Divider />
       <DialogContent>

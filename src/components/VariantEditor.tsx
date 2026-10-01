@@ -1,22 +1,24 @@
 'use client';
 
 import TranslateIcon from '@mui/icons-material/Translate';
-import { Button, CircularProgress, Stack } from '@mui/material';
+import { Alert, Button, CircularProgress, Stack } from '@mui/material';
 import React from 'react';
 
 import type { VariantEditorState } from '../hooks/use-variant-editor';
 import type { VariantBase, VariantDetailBase } from '../types';
+import dimensionValue from '../utils/dimension-value';
 import ConfirmDialog from './ConfirmDialog';
 import DimensionSelect from './DimensionSelect';
-import ManageLanguagesButton from './ManageLanguagesButton';
+import DimensionSubtitle from './DimensionSubtitle';
+import ManageVariantsButton from './ManageVariantsButton';
 import ManageVariantsDialog from './ManageVariantsDialog';
 import UnsavedChangesDialog from './UnsavedChangesDialog';
 import VariantActions, { type DialogRenderProps } from './VariantActions';
-import VariantCardEditor from './VariantCardEditor';
 
 export type VariantEditorTranslateConfig = {
   fields: string[];
   hasContent: boolean;
+  description?: string;
   translateLabel?: string;
   retranslateLabel?: string;
 };
@@ -28,13 +30,7 @@ type Props<
 > = {
   editor: VariantEditorState<V, D, T>;
   children: React.ReactNode;
-  title?: string;
-  description?: string;
-  dimensionLabel?: string;
-  action?: React.ReactNode;
-  preview?: React.ReactNode;
   translate?: VariantEditorTranslateConfig;
-  supportsPublish?: boolean;
   deleteLastWarning?: React.ReactNode;
   publishInfoMessage?: string;
   publishNotificationNote?: string;
@@ -49,92 +45,129 @@ export default function VariantEditor<
 >({
   editor,
   children,
-  title = 'Localisation',
-  description = 'Fields that vary by language.',
-  dimensionLabel = 'Language',
-  action,
-  preview,
   translate,
-  supportsPublish = true,
   deleteLastWarning,
   publishInfoMessage,
   publishNotificationNote,
   renderPublishDialog,
   renderManageDialog,
 }: Props<V, D, T>) {
-  const { entity, switcher, form, guard, actions } = editor;
+  const { dimension, switcher, form, guard, actions } = editor;
   const [isManageOpen, setIsManageOpen] = React.useState(false);
   const [isRetranslateConfirmOpen, setIsRetranslateConfirmOpen] =
     React.useState(false);
 
-  const currentLabel = switcher.options.find(
-    (option) => option.value === switcher.value,
-  )?.label;
+  const currentLabel = switcher.getLabel(switcher.value);
+  const sourceLabel = switcher.sourceVariant
+    ? switcher.getLabel(dimensionValue(switcher.sourceVariant, dimension.key))
+    : null;
 
   const closeManage = () => setIsManageOpen(false);
 
   const runTranslate = async () => {
     if (!translate) return;
-    await editor.applyTranslation(translate.fields);
-    setIsRetranslateConfirmOpen(false);
+    const success = await editor.applyTranslation(translate.fields);
+    if (success) setIsRetranslateConfirmOpen(false);
   };
 
-  const translateButton = translate &&
-    switcher.canTranslate &&
-    !switcher.isDefault && (
+  const translateLabel =
+    translate?.translateLabel ?? 'Copy & translate all with AI';
+  const retranslateLabel =
+    translate?.retranslateLabel ?? 'Retranslate all with AI';
+  const translateIcon = editor.isTranslating ? (
+    <CircularProgress size={16} color="inherit" />
+  ) : (
+    <TranslateIcon />
+  );
+
+  const translateControls =
+    translate &&
+    editor.canTranslate &&
+    !switcher.isDefault &&
+    (translate.hasContent ? (
       <Button
         variant="contained"
-        startIcon={
-          switcher.translatingField ? (
-            <CircularProgress size={16} color="inherit" />
-          ) : (
-            <TranslateIcon />
-          )
-        }
-        disabled={switcher.translatingField !== null}
-        onClick={() =>
-          translate.hasContent
-            ? setIsRetranslateConfirmOpen(true)
-            : runTranslate()
-        }
+        size="small"
+        startIcon={translateIcon}
+        disabled={editor.isTranslating}
+        onClick={() => setIsRetranslateConfirmOpen(true)}
         sx={{ alignSelf: 'flex-start' }}
       >
-        {translate.hasContent
-          ? (translate.retranslateLabel ?? 'Retranslate all with AI')
-          : (translate.translateLabel ?? 'Copy and translate all with AI')}
+        {retranslateLabel}
       </Button>
-    );
+    ) : (
+      <Alert severity="info">
+        <Stack spacing={1} alignItems="flex-start">
+          <span>
+            {translate.description ??
+              `Copy and translate everything from the ${sourceLabel} version, then edit anything that needs changing.`}
+          </span>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={translateIcon}
+            disabled={editor.isTranslating}
+            onClick={runTranslate}
+          >
+            {translateLabel}
+          </Button>
+        </Stack>
+      </Alert>
+    ));
 
   return (
     <>
-      <VariantCardEditor
-        title={title}
-        description={description}
-        action={action}
-        preview={preview}
-        dimensionSelect={
+      <Stack spacing={3}>
+        <Stack spacing={2}>
           <Stack direction="row" spacing={2} alignItems="center">
             <DimensionSelect
-              label={dimensionLabel}
+              label={dimension.label}
               value={switcher.value}
-              options={switcher.options}
+              options={dimension.options}
               onChange={editor.switchTo}
               getChips={switcher.getChips}
             />
             {editor.variants.length > 0 && (
-              <ManageLanguagesButton onClick={() => setIsManageOpen(true)} />
+              <ManageVariantsButton
+                label={`Manage All ${dimension.pluralLabel}`}
+                onClick={() => setIsManageOpen(true)}
+              />
             )}
           </Stack>
-        }
-        toolbar={translateButton}
-        footer={
+          {translateControls}
+        </Stack>
+        {switcher.isLoadingDetail ? (
+          <Stack alignItems="center" sx={{ py: 4 }}>
+            <CircularProgress size={24} />
+          </Stack>
+        ) : switcher.hasDetailError ? (
+          <Alert
+            severity="error"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={switcher.reloadDetail}
+              >
+                Retry
+              </Button>
+            }
+          >
+            Failed to load this {editor.entityLabel}.
+          </Alert>
+        ) : (
+          children
+        )}
+        {!switcher.hasDetailError && (
           <VariantActions
-            entityLabel={entity.entityLabel}
+            entityLabel={editor.entityLabel}
             dimensionLabel={currentLabel}
+            note={`Applies only to the ${dimension.label.toLowerCase()} currently selected`}
             isSaving={form.isLoading}
             isPublished={editor.isPublished}
             isNewVariant={editor.isNewVariant}
             isLastVariant={editor.isLastVariant}
+            publishable={editor.publishable}
             onSave={editor.save}
             onPublish={actions.publish}
             onUnpublish={actions.unpublish}
@@ -144,16 +177,8 @@ export default function VariantEditor<
             publishNotificationNote={publishNotificationNote}
             renderPublishDialog={renderPublishDialog}
           />
-        }
-      >
-        {switcher.isLoadingDetail ? (
-          <Stack alignItems="center" sx={{ py: 4 }}>
-            <CircularProgress size={24} />
-          </Stack>
-        ) : (
-          children
         )}
-      </VariantCardEditor>
+      </Stack>
 
       {renderManageDialog ? (
         renderManageDialog({ open: isManageOpen, onClose: closeManage })
@@ -161,14 +186,13 @@ export default function VariantEditor<
         <ManageVariantsDialog
           open={isManageOpen}
           onClose={closeManage}
-          entityLabel={entity.entityLabel}
+          entityLabel={editor.entityLabel}
+          dimension={dimension}
           variants={editor.variants}
-          getValue={editor.getValue}
-          options={switcher.options}
           onPublish={actions.bulkPublish}
           onUnpublish={actions.bulkUnpublish}
-          onDelete={actions.bulkDelete}
-          supportsPublish={supportsPublish}
+          onDelete={editor.bulkDelete}
+          publishable={editor.publishable}
           publishInfoMessage={publishInfoMessage}
           publishNotificationNote={publishNotificationNote}
         />
@@ -176,9 +200,11 @@ export default function VariantEditor<
 
       <ConfirmDialog
         open={isRetranslateConfirmOpen}
-        title="Retranslate all with AI"
-        description="This will overwrite any changes made in this language."
-        confirmText="Retranslate"
+        title={retranslateLabel}
+        subtitle={<DimensionSubtitle label={currentLabel} />}
+        description={`Are you sure you want to ${retranslateLabel.charAt(0).toLowerCase()}${retranslateLabel.slice(1)}?`}
+        warning="We'll overwrite all the content you've edited on this page. This action can't be undone."
+        confirmText="Confirm Retranslate"
         confirmColor="warning"
         onClose={() => setIsRetranslateConfirmOpen(false)}
         onConfirm={runTranslate}

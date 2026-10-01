@@ -5,13 +5,10 @@ import { Button } from '@mui/material';
 
 type Props = {
   onClick: () => void;
-  label?: string;
+  label: string;
 };
 
-export default function ManageLanguagesButton({
-  onClick,
-  label = 'Manage All Languages',
-}: Props) {
+export default function ManageVariantsButton({ onClick, label }: Props) {
   return (
     <Button
       variant="text"

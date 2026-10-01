@@ -141,14 +141,13 @@ export type BlockFieldPreviews = Partial<
 
 export type VariantBase = {
   '@id': string;
-  id: string;
   publishAt?: string | null;
   updatedAt?: string;
 };
 
-export type DimensionChip = {
-  label: string;
-  color: 'default' | 'success' | 'warning' | 'info';
+export type VariantDetailBase = {
+  '@id': string;
+  updatedAt?: string;
 };
 
 export type DimensionOption = {
@@ -156,25 +155,32 @@ export type DimensionOption = {
   label: string;
 };
 
-export type Translations = Record<string, unknown>;
-
-export type Translate = (
-  fields: string[],
-  source: { id: string; value: string },
-) => Promise<Translations | null>;
-
-export type VariantDetailBase = { updatedAt?: string };
-
-export type VariantEntity = {
-  slug: string;
-  identityCollection?: string;
-  identityId: string;
-  entityLabel: string;
+export type DimensionChip = {
+  label: string;
+  color: 'default' | 'success' | 'warning' | 'info';
 };
 
-export type SubmitHelpers = {
-  addSubmitError: (field: string, error: string) => void;
-  setLoading: (loading: boolean) => void;
+export type Dimension = {
+  key: string;
+  label: string;
+  pluralLabel: string;
+  options: readonly DimensionOption[];
+  defaultValue?: string;
+  translatable?: boolean;
+};
+
+export type Translations = Record<string, unknown>;
+
+export type VariantEditorConfig = {
+  callApi: CallApi;
+  toast: {
+    success: (message: string) => void;
+    error: (message: string) => void;
+  };
+  push: (href: string) => void;
+  getParams: () => Record<string, string | undefined>;
+  setParams: (next: Record<string, string | null>) => void;
+  defaultDimension: Dimension;
 };
 
 export type CallApi = <R>(
@@ -205,4 +211,12 @@ export type DragRowProps = {
   onDragEnd: () => void;
   onDragOver: (event: React.DragEvent) => void;
   onDrop: () => void;
+};
+
+export type BlockComponentProps = {
+  block: Block;
+  onChange: (data: Record<string, unknown>) => void;
+  errors?: BlockErrors;
+  errorPath: string;
+  headerActionContainer: HTMLElement | null;
 };

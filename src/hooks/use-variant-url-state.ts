@@ -6,27 +6,35 @@ export type VariantUrlState = {
   showReference: boolean;
   setValue: (value: string) => void;
   setReference: (reference: string | null) => void;
+  closeReference: () => void;
 };
 
 type Options = {
-  params: { locale?: string; ref?: string };
+  key: string;
+  params: Record<string, string | undefined>;
   defaultValue: string;
-  navigate: (next: { locale?: string; ref?: string | null }) => void;
+  navigate: (next: Record<string, string | null>) => void;
 };
 
-// ref === '_' means the reference panel is open with nothing selected
+const REFERENCE_PARAM = 'ref';
+const EMPTY_REFERENCE = '_';
+
 export default function useVariantUrlState({
+  key,
   params,
   defaultValue,
   navigate,
 }: Options): VariantUrlState {
-  const referenceParam = params.ref;
+  const referenceParam = params[REFERENCE_PARAM];
 
   return {
-    value: params.locale ?? defaultValue,
-    reference: referenceParam === '_' ? null : (referenceParam ?? null),
+    value: params[key] ?? defaultValue,
+    reference:
+      referenceParam === EMPTY_REFERENCE ? null : (referenceParam ?? null),
     showReference: Boolean(referenceParam),
-    setValue: (next) => navigate({ locale: next }),
-    setReference: (next) => navigate({ ref: next }),
+    setValue: (next) => navigate({ [key]: next }),
+    setReference: (next) =>
+      navigate({ [REFERENCE_PARAM]: next ?? EMPTY_REFERENCE }),
+    closeReference: () => navigate({ [REFERENCE_PARAM]: null }),
   };
 }

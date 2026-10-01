@@ -13,17 +13,18 @@ export type DialogRenderProps = {
 
 type Props = {
   entityLabel: string;
+  dimensionLabel: string;
+  note: string;
   isSaving: boolean;
   isPublished: boolean;
   isNewVariant: boolean;
   isLastVariant: boolean;
+  publishable: boolean;
   onSave: () => void;
   onPublish: (publishAt: string) => Promise<boolean>;
   onUnpublish: () => Promise<boolean>;
   onDelete: () => Promise<boolean>;
-  dimensionLabel?: string;
   deleteLastWarning?: React.ReactNode;
-  note?: string;
   publishInfoMessage?: string;
   publishNotificationNote?: string;
   renderPublishDialog?: (props: DialogRenderProps) => React.ReactNode;
@@ -31,17 +32,18 @@ type Props = {
 
 export default function VariantActions({
   entityLabel,
+  dimensionLabel,
+  note,
   isSaving,
   isPublished,
   isNewVariant,
   isLastVariant,
+  publishable,
   onSave,
   onPublish,
   onUnpublish,
   onDelete,
-  dimensionLabel,
   deleteLastWarning,
-  note = 'Applies only to the language currently selected',
   publishInfoMessage,
   publishNotificationNote,
   renderPublishDialog,
@@ -62,21 +64,32 @@ export default function VariantActions({
   return (
     <>
       <Stack direction="row" justifyContent="space-between" alignItems="start">
-        <Button variant="contained" onClick={onSave} disabled={isSaving}>
-          Save Changes
-        </Button>
+        <Stack alignItems="flex-start" spacing={1}>
+          <Button variant="contained" onClick={onSave} disabled={isSaving}>
+            Save Changes
+          </Button>
+          {isNewVariant && (
+            <Typography variant="body2" color="text.secondary">
+              {note}
+            </Typography>
+          )}
+        </Stack>
         {!isNewVariant && (
           <Stack alignItems="flex-end" spacing={1}>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="contained"
-                color={isPublished ? 'warning' : 'success'}
-                onClick={() =>
-                  isPublished ? setConfirm('unpublish') : setIsPublishOpen(true)
-                }
-              >
-                {isPublished ? 'Unpublish' : 'Publish...'}
-              </Button>
+            <Stack direction="row" spacing={2}>
+              {publishable && (
+                <Button
+                  variant="contained"
+                  color={isPublished ? 'warning' : 'success'}
+                  onClick={() =>
+                    isPublished
+                      ? setConfirm('unpublish')
+                      : setIsPublishOpen(true)
+                  }
+                >
+                  {isPublished ? 'Unpublish' : 'Publish...'}
+                </Button>
+              )}
               <Button
                 variant="outlined"
                 color="error"
@@ -104,31 +117,33 @@ export default function VariantActions({
           confirm === 'delete' ? (
             <Stack spacing={1}>
               <Typography variant="body2">
-                Are you sure you want to delete this localisation?
+                Are you sure you want to delete this {entityLabel.toLowerCase()}{' '}
+                in {dimensionLabel}?
               </Typography>
               {isLastVariant && deleteLastWarning}
             </Stack>
           ) : (
-            'Are you sure you want to unpublish this localisation?'
+            `Are you sure you want to unpublish this ${entityLabel.toLowerCase()} in ${dimensionLabel}?`
           )
         }
         onClose={() => setConfirm(null)}
         onConfirm={handleConfirm}
       />
 
-      {renderPublishDialog ? (
-        renderPublishDialog({ open: isPublishOpen, onClose: closePublish })
-      ) : (
-        <PublishVariantDialog
-          open={isPublishOpen}
-          onClose={closePublish}
-          entityLabel={entityLabel}
-          dimensionLabel={dimensionLabel}
-          onPublish={onPublish}
-          infoMessage={publishInfoMessage}
-          notificationNote={publishNotificationNote}
-        />
-      )}
+      {publishable &&
+        (renderPublishDialog ? (
+          renderPublishDialog({ open: isPublishOpen, onClose: closePublish })
+        ) : (
+          <PublishVariantDialog
+            open={isPublishOpen}
+            onClose={closePublish}
+            entityLabel={entityLabel}
+            dimensionLabel={dimensionLabel}
+            onPublish={onPublish}
+            infoMessage={publishInfoMessage}
+            notificationNote={publishNotificationNote}
+          />
+        ))}
     </>
   );
 }

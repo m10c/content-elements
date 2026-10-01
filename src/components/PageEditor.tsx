@@ -4,13 +4,11 @@ import { Box, Button, Stack } from '@mui/material';
 import React from 'react';
 import { FieldProp } from 'react-typed-form';
 
-import usePreviewSender from '../hooks/use-preview-sender';
 import BlocksField, { type ListCardIcons } from './BlocksField';
 import { PREVIEW_DEVICE_WIDTHS } from '../constants';
+import LivePreview from './LivePreview';
 import PreviewDeviceSelect from './PreviewDeviceSelect';
-import PreviewIframe from './PreviewIframe';
-import PreviewPanel from './PreviewPanel';
-import PreviewToggleButton from './PreviewToggleButton';
+import PreviewLayout from './PreviewLayout';
 import type {
   Block,
   PreviewDevice,
@@ -63,19 +61,11 @@ export default function PageEditor({
   publishDisabled,
   onPublish,
 }: Props) {
-  const [showPreview, setShowPreview] = React.useState(true);
   const [previewDevice, setPreviewDevice] =
     React.useState<PreviewDevice>('desktop');
 
   const isGlobal = globalPagePaths.includes(pagePath);
   const routePath = isGlobal ? GLOBAL_PREVIEW_PATH : (previewPath ?? pagePath);
-
-  const { iframeRef } = usePreviewSender({
-    previewUrl,
-    pagePath,
-    content: previewContent,
-    globals: isGlobal ? { [pagePath]: previewContent } : undefined,
-  });
 
   const previewSrc = `${previewUrl}/${
     routePath === 'home' ? '' : routePath
@@ -85,25 +75,27 @@ export default function PageEditor({
     <Box
       sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
     >
-      <Stack direction="row" sx={{ flex: 1, overflow: 'hidden' }}>
-        <Box
-          sx={{
-            flex: 1,
-            minWidth: 0,
-            overflow: 'auto',
-            p: 3,
-            pb: 10,
-            bgcolor: 'background.level1',
-          }}
-        >
-          {!showPreview && (
-            <Box sx={{ mb: 2 }}>
-              <PreviewToggleButton
-                isPreviewVisible={false}
-                onClick={() => setShowPreview(true)}
-              />
-            </Box>
-          )}
+      <PreviewLayout
+        previewToolbar={
+          <PreviewDeviceSelect
+            value={previewDevice}
+            onChange={setPreviewDevice}
+            labels={deviceLabels}
+          />
+        }
+        preview={
+          <LivePreview
+            previewUrl={previewUrl}
+            src={previewSrc}
+            content={previewContent}
+            pagePath={pagePath}
+            globals={isGlobal ? { [pagePath]: previewContent } : undefined}
+            renderWidth={PREVIEW_DEVICE_WIDTHS[previewDevice]}
+            title="Page preview"
+          />
+        }
+      >
+        <Box sx={{ p: 3, pb: 10 }}>
           <BlocksField
             blockTypes={blockTypes}
             field={field}
@@ -113,28 +105,7 @@ export default function PageEditor({
             errors={errors}
           />
         </Box>
-
-        {showPreview && (
-          <PreviewPanel
-            onHide={() => setShowPreview(false)}
-            toolbar={
-              <PreviewDeviceSelect
-                value={previewDevice}
-                onChange={setPreviewDevice}
-                labels={deviceLabels}
-              />
-            }
-            sx={{ flex: 1, minWidth: 0, bgcolor: 'grey.200' }}
-          >
-            <PreviewIframe
-              iframeRef={iframeRef}
-              src={previewSrc}
-              renderWidth={PREVIEW_DEVICE_WIDTHS[previewDevice]}
-              title="Page preview"
-            />
-          </PreviewPanel>
-        )}
-      </Stack>
+      </PreviewLayout>
 
       <Stack
         direction="row"
