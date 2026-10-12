@@ -78,7 +78,8 @@ export default function useDimensionSwitcher<
       chips.push({ label: 'Default', color: 'default' });
     }
     const variant = findVariant(target);
-    if (publishable && variant) chips.push(publishStatusChip(variant.publishAt));
+    if (publishable && variant)
+      chips.push(publishStatusChip(variant.publishAt));
     return chips;
   };
 

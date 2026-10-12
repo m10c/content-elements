@@ -238,30 +238,28 @@ function BlockCard({
       errorPath={errorPath}
       headerActionContainer={headerActionContainer}
     />
+  ) : blockType ? (
+    Object.entries(blockType.fields)
+      .filter(([key]) => !headerFieldKeys.has(key))
+      .map(([key, fieldDef]) => (
+        <BlockFieldRenderer
+          key={key}
+          fieldKey={key}
+          fieldDef={fieldDef}
+          value={block.data[key]}
+          renderers={renderers}
+          previews={previews}
+          icons={icons}
+          errors={errors}
+          errorPath={`${errorPath}.${key}`}
+          headerSlot={renderHeaderFields(fieldDef)}
+          onChange={(value) => updateData(key, value)}
+        />
+      ))
   ) : (
-    blockType ? (
-            Object.entries(blockType.fields)
-              .filter(([key]) => !headerFieldKeys.has(key))
-              .map(([key, fieldDef]) => (
-                <BlockFieldRenderer
-                  key={key}
-                  fieldKey={key}
-                  fieldDef={fieldDef}
-                  value={block.data[key]}
-                  renderers={renderers}
-                  previews={previews}
-                  icons={icons}
-                  errors={errors}
-                  errorPath={`${errorPath}.${key}`}
-                  headerSlot={renderHeaderFields(fieldDef)}
-                  onChange={(value) => updateData(key, value)}
-                />
-              ))
-          ) : (
-            <Typography variant="body2" color="text.secondary">
-              No schema registered for block type &quot;{block.type}&quot;.
-            </Typography>
-          )
+    <Typography variant="body2" color="text.secondary">
+      No schema registered for block type &quot;{block.type}&quot;.
+    </Typography>
   );
 
   if (dragProps || onDelete) {

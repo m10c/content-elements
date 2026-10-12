@@ -2,7 +2,9 @@ import React from 'react';
 
 import type { DragRowProps } from '../types';
 
-export default function useDragReorder(onMove: (from: number, to: number) => void) {
+export default function useDragReorder(
+  onMove: (from: number, to: number) => void,
+) {
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
 
   return (index: number): DragRowProps => ({

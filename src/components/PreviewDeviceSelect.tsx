@@ -17,7 +17,11 @@ type Props = {
   labels?: Partial<Record<PreviewDevice, string>>;
 };
 
-export default function PreviewDeviceSelect({ value, onChange, labels }: Props) {
+export default function PreviewDeviceSelect({
+  value,
+  onChange,
+  labels,
+}: Props) {
   return (
     <FormControl size="small">
       <Select
