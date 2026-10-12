@@ -27,12 +27,11 @@ export default function PreviewLayout({
           flex: 1,
           minWidth: 0,
           overflow: 'auto',
-          position: 'relative',
           bgcolor: 'background.level1',
         }}
       >
         {!isPreviewVisible && (
-          <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 1 }}>
+          <Box sx={{ px: 3, pt: 3 }}>
             <PreviewToggleButton
               isPreviewVisible={false}
               onClick={() => setIsPreviewVisible(true)}

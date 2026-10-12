@@ -30,6 +30,7 @@ export type UseVariantEditorOptions<
   toFormValues: (detail: D | null) => T;
   dimension?: Dimension;
   publishable?: boolean;
+  postValidateTransform?: (values: Partial<T>) => Record<string, unknown>;
 };
 
 export type VariantEditorState<
@@ -70,6 +71,7 @@ export default function useVariantEditor<
   toFormValues,
   dimension: dimensionOverride,
   publishable = true,
+  postValidateTransform,
 }: UseVariantEditorOptions<V, D, T>): VariantEditorState<V, D, T> {
   const { getParams, setParams, defaultDimension } = useVariantEditorContext();
   const dimension = dimensionOverride ?? defaultDimension;
@@ -114,7 +116,10 @@ export default function useVariantEditor<
     savedValues,
     resetKey: `${currentVariant?.['@id'] ?? `new:${value}`}:${currentDetail?.updatedAt ?? ''}`,
     onSubmit: async (values, { addSubmitError, setLoading }) => {
-      const success = await actions.submit(values, {
+      const body = postValidateTransform
+        ? postValidateTransform(values)
+        : values;
+      const success = await actions.submit(body, {
         addSubmitError: (field, error) =>
           addSubmitError(field as keyof Partial<T>, error),
         setLoading,

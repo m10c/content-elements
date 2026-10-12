@@ -22,6 +22,7 @@ type Props = {
   warning?: React.ReactNode;
   confirmText?: string;
   confirmColor?: 'error' | 'primary' | 'warning' | 'success';
+  isLoading?: boolean;
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -34,11 +35,17 @@ export default function ConfirmDialog({
   warning,
   confirmText = 'Confirm',
   confirmColor = 'error',
+  isLoading = false,
   onClose,
   onConfirm,
 }: Props) {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog
+      open={open}
+      onClose={isLoading ? undefined : onClose}
+      maxWidth="xs"
+      fullWidth
+    >
       <DialogTitle component="div">
         <Typography variant="h6">{title}</Typography>
         {subtitle && (
@@ -70,10 +77,20 @@ export default function ConfirmDialog({
       </DialogContent>
       <Divider />
       <DialogActions sx={{ justifyContent: 'flex-start', p: 2 }}>
-        <Button onClick={onConfirm} variant="contained" color={confirmColor}>
+        <Button
+          onClick={onConfirm}
+          variant="contained"
+          color={confirmColor}
+          disabled={isLoading}
+        >
           {confirmText}
         </Button>
-        <Button onClick={onClose} variant="outlined" color="inherit">
+        <Button
+          onClick={onClose}
+          variant="outlined"
+          color="inherit"
+          disabled={isLoading}
+        >
           Cancel
         </Button>
       </DialogActions>
