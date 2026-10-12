@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { PREVIEW_MESSAGE } from '../constants';
-import type { PreviewAuthMessage, PreviewMessage } from '../types';
+import type { PreviewMessage } from '../types';
 
 type UsePreviewSenderConfig = {
   /** The full preview URL to load in the iframe */
@@ -12,8 +12,6 @@ type UsePreviewSenderConfig = {
   pagePath?: string;
   /** Global content (footer, navigation, …) keyed by page path. */
   globals?: Record<string, unknown>;
-  /** Answers the preview's token requests so it can call authed APIs. */
-  getToken?: () => Promise<string | null>;
 };
 
 type UsePreviewSenderResult = {
@@ -37,13 +35,11 @@ export default function usePreviewSender(
   contentRef.current = config.content;
   const globalsRef = useRef(config.globals);
   globalsRef.current = config.globals;
-  const getTokenRef = useRef(config.getToken);
-  getTokenRef.current = config.getToken;
 
   const previewOrigin = getOrigin(config.previewUrl);
 
   const post = useCallback(
-    (message: PreviewMessage | PreviewAuthMessage) => {
+    (message: PreviewMessage) => {
       const target = iframeRef.current?.contentWindow;
       if (!target || !previewOrigin) return;
       target.postMessage(message, previewOrigin);
@@ -66,7 +62,7 @@ export default function usePreviewSender(
   );
 
   useEffect(() => {
-    async function handleMessage(event: MessageEvent) {
+    function handleMessage(event: MessageEvent) {
       if (
         event.origin !== previewOrigin ||
         event.source !== iframeRef.current?.contentWindow
@@ -76,16 +72,11 @@ export default function usePreviewSender(
       if (event.data?.type === PREVIEW_MESSAGE.ready) {
         sendContent(contentRef.current, globalsRef.current);
       }
-      if (event.data?.type === PREVIEW_MESSAGE.tokenRequest) {
-        const getToken = getTokenRef.current;
-        if (!getToken) return;
-        post({ type: PREVIEW_MESSAGE.auth, token: await getToken() });
-      }
     }
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [previewOrigin, post, sendContent]);
+  }, [previewOrigin, sendContent]);
 
   useEffect(() => {
     sendContent(config.content, config.globals);

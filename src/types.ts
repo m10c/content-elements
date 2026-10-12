@@ -201,11 +201,6 @@ export type PreviewMessage = {
   globals?: Record<string, unknown>;
 };
 
-export type PreviewAuthMessage = {
-  type: typeof PREVIEW_MESSAGE.auth;
-  token: string | null;
-};
-
 export type DragRowProps = {
   onDragStart: (event: React.DragEvent) => void;
   onDragEnd: () => void;

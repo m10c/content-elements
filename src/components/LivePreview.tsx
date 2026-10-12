@@ -10,7 +10,6 @@ type Props = {
   renderWidth: number;
   pagePath?: string;
   globals?: Record<string, unknown>;
-  getToken?: () => Promise<string | null>;
   title?: string;
 };
 
@@ -21,7 +20,6 @@ export default function LivePreview({
   renderWidth,
   pagePath,
   globals,
-  getToken,
   title,
 }: Props) {
   const { iframeRef } = usePreviewSender({
@@ -29,7 +27,6 @@ export default function LivePreview({
     content,
     pagePath,
     globals,
-    getToken,
   });
 
   return (

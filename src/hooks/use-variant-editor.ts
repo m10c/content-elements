@@ -47,15 +47,12 @@ export type VariantEditorState<
   guard: UnsavedChangesGuard;
   actions: VariantActionHandlers;
   canTranslate: boolean;
-  isTranslating: boolean;
   isPublished: boolean;
   isNewVariant: boolean;
   isLastVariant: boolean;
   switchTo: (value: string) => void;
   save: () => Promise<boolean>;
   remove: () => Promise<boolean>;
-  bulkDelete: (iris: string[]) => Promise<boolean>;
-  applyTranslation: (fields: string[]) => Promise<boolean>;
 };
 
 export default function useVariantEditor<
@@ -93,7 +90,6 @@ export default function useVariantEditor<
     publishable,
   });
   const { currentVariant, currentDetail, sourceVariant, value } = switcher;
-  const [isTranslating, setIsTranslating] = React.useState(false);
 
   const actions = useVariantActions<V>({
     identityIri,
@@ -134,42 +130,15 @@ export default function useVariantEditor<
     onSave: () => form.handleSubmit(),
   });
 
-  const switchAwayFromDeleted = (deletedIris: string[]) => {
-    if (!currentVariant || !deletedIris.includes(currentVariant['@id'])) return;
-    const remaining = variants.find(
-      (variant) => !deletedIris.includes(variant['@id']),
-    );
-    if (remaining) switcher.setValue(dimensionValue(remaining, dimension.key));
-  };
-
   const remove = async () => {
     if (!currentVariant) return false;
     const success = await actions.remove();
-    if (success) switchAwayFromDeleted([currentVariant['@id']]);
-    return success;
-  };
-
-  const bulkDelete = async (iris: string[]) => {
-    const success = await actions.bulkDelete(iris);
-    if (success) switchAwayFromDeleted(iris);
-    return success;
-  };
-
-  const applyTranslation = async (fields: string[]) => {
-    if (!sourceVariant) return false;
-    setIsTranslating(true);
-    try {
-      const translations = await actions.translate(fields, sourceVariant);
-      if (!translations) return false;
-      Object.entries(translations).forEach(([name, translated]) => {
-        form
-          .getField(name as keyof T)
-          .handleValueChange(translated as T[keyof T]);
-      });
-      return true;
-    } finally {
-      setIsTranslating(false);
-    }
+    if (!success) return false;
+    const remaining = variants.find(
+      (variant) => variant['@id'] !== currentVariant['@id'],
+    );
+    if (remaining) switcher.setValue(dimensionValue(remaining, dimension.key));
+    return true;
   };
 
   return {
@@ -182,14 +151,11 @@ export default function useVariantEditor<
     guard,
     actions,
     canTranslate: Boolean(dimension.translatable) && sourceVariant !== null,
-    isTranslating,
     isPublished: currentVariant?.publishAt != null,
     isNewVariant: currentVariant === null,
     isLastVariant: variants.length === 1,
     switchTo: (next) => guard.guard(() => switcher.setValue(next)),
     save: () => form.handleSubmit(),
     remove,
-    bulkDelete,
-    applyTranslation,
   };
 }

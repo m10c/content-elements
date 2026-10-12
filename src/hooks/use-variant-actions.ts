@@ -33,9 +33,6 @@ export type VariantActionHandlers = {
   publish: (publishAt: string) => Promise<boolean>;
   unpublish: () => Promise<boolean>;
   remove: () => Promise<boolean>;
-  bulkPublish: (iris: string[], publishAt: string) => Promise<boolean>;
-  bulkUnpublish: (iris: string[]) => Promise<boolean>;
-  bulkDelete: (iris: string[]) => Promise<boolean>;
   invalidate: () => void;
 };
 
@@ -53,27 +50,6 @@ export default function useVariantActions<V extends VariantBase>({
   const { invalidateMatching } = useInvalidation();
 
   const invalidate = () => invalidateMatching(identityIri);
-  const countLabel = (count: number) =>
-    `${count} ${(count === 1 ? dimension.label : dimension.pluralLabel).toLowerCase()}`;
-
-  const runEach = async (
-    iris: string[],
-    request: (iri: string) => Promise<unknown>,
-    pastTense: string,
-  ) => {
-    let failedCount = 0;
-    // Sequential, so the backend's "delete identity with its last variant" check sees an accurate count
-    for (const iri of iris) {
-      if (!(await request(iri))) failedCount += 1;
-    }
-    if (failedCount < iris.length) invalidate();
-    if (failedCount > 0) {
-      toast.error(`${countLabel(failedCount)} failed`);
-    } else {
-      toast.success(`${countLabel(iris.length)} ${pastTense}`);
-    }
-    return failedCount === 0;
-  };
 
   return {
     translate: async (fields, source) => {
@@ -144,35 +120,14 @@ export default function useVariantActions<V extends VariantBase>({
         toast.error(`Failed to delete ${entityLabel}`);
         return false;
       }
-      toast.success(`${entityLabel} deleted`);
-      if (variants.length === 1) push(listPath);
-      else invalidate();
+      if (variants.length === 1) {
+        toast.success(`${entityLabel} deleted`);
+        push(listPath);
+      } else {
+        toast.success(`${dimension.label} deleted`);
+        invalidate();
+      }
       return true;
-    },
-
-    bulkPublish: (iris, publishAt) =>
-      runEach(
-        iris,
-        (iri) =>
-          callApi(`${iri}/publish`, { method: 'POST', jsonBody: { publishAt } }),
-        'published',
-      ),
-
-    bulkUnpublish: (iris) =>
-      runEach(
-        iris,
-        (iri) => callApi(`${iri}/unpublish`, { method: 'POST', jsonBody: {} }),
-        'unpublished',
-      ),
-
-    bulkDelete: async (iris) => {
-      const success = await runEach(
-        iris,
-        (iri) => callApi(iri, { method: 'DELETE' }),
-        'deleted',
-      );
-      if (success && iris.length === variants.length) push(listPath);
-      return success;
     },
 
     invalidate,
