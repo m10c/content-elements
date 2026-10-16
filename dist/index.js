@@ -272,9 +272,16 @@ function BlocksField({
   header,
   footer,
   emptyState
-}) {
+}, ref) {
   const blocks = field.value ?? [];
   const [pendingDeleteIndex, setPendingDeleteIndex] = React3.useState(null);
+  const [pendingScrollIndex, setPendingScrollIndex] = React3.useState(null);
+  const blockElementsRef = React3.useRef(/* @__PURE__ */ new Map());
+  React3.useImperativeHandle(
+    ref,
+    () => ({ scrollToBlock: (index) => setPendingScrollIndex(index) }),
+    []
+  );
   const nextKeyRef = React3.useRef(0);
   const keysRef = React3.useRef([]);
   if (keysRef.current.length !== blocks.length) {
@@ -301,27 +308,49 @@ function BlocksField({
     keysRef.current = moveItem(keysRef.current, from, to);
     field.handleValueChange(moveItem(blocks, from, to));
   });
+  React3.useEffect(() => {
+    if (pendingScrollIndex === null) return;
+    setPendingScrollIndex(null);
+    const key = keysRef.current[pendingScrollIndex];
+    if (key === void 0) return;
+    blockElementsRef.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [pendingScrollIndex]);
   return /* @__PURE__ */ jsxs4(Fragment, { children: [
     /* @__PURE__ */ jsxs4(Stack4, { spacing: canEditBlockList ? 3 : 2, children: [
       header,
       blocks.length === 0 && emptyState,
-      blocks.map((block, index) => /* @__PURE__ */ jsx4(
-        BlockCard,
-        {
-          block,
-          blockType: blockTypesByKey[block.type],
-          component: blockComponents?.[block.type],
-          renderers,
-          previews,
-          icons,
-          errors,
-          errorPath: String(index),
-          dragProps: canEditBlockList ? getDragProps(index) : void 0,
-          onChange: (next) => updateBlock(index, next),
-          onDelete: canEditBlockList ? () => setPendingDeleteIndex(index) : void 0
-        },
-        keysRef.current[index]
-      )),
+      blocks.map((block, index) => {
+        const key = keysRef.current[index];
+        if (key === void 0) {
+          throw new Error(`Block ${index} has no key`);
+        }
+        return /* @__PURE__ */ jsx4(
+          "div",
+          {
+            ref: (element) => {
+              if (element) blockElementsRef.current.set(key, element);
+              else blockElementsRef.current.delete(key);
+            },
+            children: /* @__PURE__ */ jsx4(
+              BlockCard,
+              {
+                block,
+                blockType: blockTypesByKey[block.type],
+                component: blockComponents?.[block.type],
+                renderers,
+                previews,
+                icons,
+                errors,
+                errorPath: String(index),
+                dragProps: canEditBlockList ? getDragProps(index) : void 0,
+                onChange: (next) => updateBlock(index, next),
+                onDelete: canEditBlockList ? () => setPendingDeleteIndex(index) : void 0
+              }
+            )
+          },
+          key
+        );
+      }),
       footer
     ] }),
     /* @__PURE__ */ jsx4(
@@ -340,6 +369,7 @@ function BlocksField({
     )
   ] });
 }
+var BlocksField_default = React3.forwardRef(BlocksField);
 function BlockCard({
   block,
   blockType,
@@ -1225,7 +1255,7 @@ function PageEditor({
               }
             ),
             children: /* @__PURE__ */ jsx11(Box5, { sx: { p: 3, pb: 10 }, children: /* @__PURE__ */ jsx11(
-              BlocksField,
+              BlocksField_default,
               {
                 blockTypes,
                 field,
@@ -1995,7 +2025,7 @@ function createBlock(blockType) {
 export {
   AddBlockDialog,
   BlockCardFrame,
-  BlocksField,
+  BlocksField_default as BlocksField,
   ConfirmDialog,
   DimensionSelect,
   LivePreview,

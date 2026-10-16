@@ -227,7 +227,14 @@ type Props$c = {
     footer?: React$1.ReactNode;
     emptyState?: React$1.ReactNode;
 };
-declare function BlocksField({ blockTypes, field, renderers, previews, icons, errors, blockComponents, canEditBlockList, header, footer, emptyState, }: Props$c): react_jsx_runtime.JSX.Element;
+type BlocksFieldHandle = {
+    /**
+     * Scrolls the block at `index` into view. Safe to call straight after adding
+     * a block: the scroll waits until that block has rendered.
+     */
+    scrollToBlock: (index: number) => void;
+};
+declare const _default: React$1.ForwardRefExoticComponent<Props$c & React$1.RefAttributes<BlocksFieldHandle>>;
 
 type Props$b = {
     open: boolean;
@@ -447,4 +454,4 @@ declare function dimensionValue(variant: VariantBase, key: string): string;
 
 declare function moveItem<T>(items: readonly T[], from: number, to: number): T[];
 
-export { AddBlockDialog, type Block, BlockCardFrame, type BlockComponentProps, type BlockErrors, type BlockFieldPreview, type BlockFieldPreviews, type BlockFieldRenderer, type BlockFieldRendererProps, type BlockFieldRenderers, type BlockType, type BlockTypeField, type BlockTypeInput, BlocksField, type CallApi, ConfirmDialog, type Dimension, type DimensionChip, type DimensionOption, DimensionSelect, type DragRowProps, type ListCardIcons, type ListField, LivePreview, PREVIEW_DEVICE_WIDTHS, PREVIEW_MESSAGE, PageEditor, type PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, type PreviewMessage, PreviewToggleButton, PublishState, SeoEditor, type SimpleField, type SimpleFieldKind, type Translations, UnsavedChangesDialog, type UseVariantEditorOptions, type VariantBase, type VariantDetailBase, type VariantEditorConfig, VariantEditorProvider, type VariantEditorState, createBlock, dimensionValue, moveItem, useDragReorder, useDraggableByHandle, useVariantEditor, useVariantEditorContext };
+export { AddBlockDialog, type Block, BlockCardFrame, type BlockComponentProps, type BlockErrors, type BlockFieldPreview, type BlockFieldPreviews, type BlockFieldRenderer, type BlockFieldRendererProps, type BlockFieldRenderers, type BlockType, type BlockTypeField, type BlockTypeInput, _default as BlocksField, type BlocksFieldHandle, type CallApi, ConfirmDialog, type Dimension, type DimensionChip, type DimensionOption, DimensionSelect, type DragRowProps, type ListCardIcons, type ListField, LivePreview, PREVIEW_DEVICE_WIDTHS, PREVIEW_MESSAGE, PageEditor, type PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, type PreviewMessage, PreviewToggleButton, PublishState, SeoEditor, type SimpleField, type SimpleFieldKind, type Translations, UnsavedChangesDialog, type UseVariantEditorOptions, type VariantBase, type VariantDetailBase, type VariantEditorConfig, VariantEditorProvider, type VariantEditorState, createBlock, dimensionValue, moveItem, useDragReorder, useDraggableByHandle, useVariantEditor, useVariantEditorContext };
