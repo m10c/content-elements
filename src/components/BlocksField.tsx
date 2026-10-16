@@ -141,13 +141,13 @@ function BlocksField(
 
   React.useEffect(() => {
     if (pendingScrollIndex === null) return;
-    const key = keysRef.current[pendingScrollIndex];
-    const element = key && blockElementsRef.current.get(key);
-    // Keep waiting if the block hasn't rendered yet
-    if (!element) return;
     setPendingScrollIndex(null);
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [pendingScrollIndex, blocks.length]);
+    const key = keysRef.current[pendingScrollIndex];
+    if (key === undefined) return;
+    blockElementsRef.current
+      .get(key)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [pendingScrollIndex]);
 
   return (
     <>
@@ -155,7 +155,10 @@ function BlocksField(
         {header}
         {blocks.length === 0 && emptyState}
         {blocks.map((block, index) => {
-          const key = keysRef.current[index] ?? String(index);
+          const key = keysRef.current[index];
+          if (key === undefined) {
+            throw new Error(`Block ${index} has no key`);
+          }
           return (
             <div
               key={key}
