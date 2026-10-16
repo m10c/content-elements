@@ -1,6 +1,10 @@
 export { default as AddBlockDialog } from './AddBlockDialog';
 export { default as BlockCardFrame } from './BlockCardFrame';
-export { default as BlocksField, type ListCardIcons } from './BlocksField';
+export {
+  default as BlocksField,
+  type BlocksFieldHandle,
+  type ListCardIcons,
+} from './BlocksField';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DimensionSelect } from './DimensionSelect';
 export { default as LivePreview } from './LivePreview';

@@ -66,23 +66,44 @@ type Props = {
   emptyState?: React.ReactNode;
 };
 
-export default function BlocksField({
-  blockTypes,
-  field,
-  renderers,
-  previews,
-  icons,
-  errors,
-  blockComponents,
-  canEditBlockList = false,
-  header,
-  footer,
-  emptyState,
-}: Props) {
+export type BlocksFieldHandle = {
+  /**
+   * Scrolls the block at `index` into view. Safe to call straight after adding
+   * a block: the scroll waits until that block has rendered.
+   */
+  scrollToBlock: (index: number) => void;
+};
+
+function BlocksField(
+  {
+    blockTypes,
+    field,
+    renderers,
+    previews,
+    icons,
+    errors,
+    blockComponents,
+    canEditBlockList = false,
+    header,
+    footer,
+    emptyState,
+  }: Props,
+  ref: React.ForwardedRef<BlocksFieldHandle>,
+) {
   const blocks = field.value ?? [];
   const [pendingDeleteIndex, setPendingDeleteIndex] = React.useState<
     number | null
   >(null);
+  const [pendingScrollIndex, setPendingScrollIndex] = React.useState<
+    number | null
+  >(null);
+  const blockElementsRef = React.useRef(new Map<string, HTMLElement>());
+
+  React.useImperativeHandle(
+    ref,
+    () => ({ scrollToBlock: (index) => setPendingScrollIndex(index) }),
+    [],
+  );
 
   const nextKeyRef = React.useRef(0);
   const keysRef = React.useRef<string[]>([]);
@@ -118,29 +139,54 @@ export default function BlocksField({
     field.handleValueChange(moveItem(blocks, from, to));
   });
 
+  React.useEffect(() => {
+    if (pendingScrollIndex === null) return;
+    setPendingScrollIndex(null);
+    const key = keysRef.current[pendingScrollIndex];
+    if (key === undefined) return;
+    blockElementsRef.current
+      .get(key)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [pendingScrollIndex]);
+
   return (
     <>
       <Stack spacing={canEditBlockList ? 3 : 2}>
         {header}
         {blocks.length === 0 && emptyState}
-        {blocks.map((block, index) => (
-          <BlockCard
-            key={keysRef.current[index]}
-            block={block}
-            blockType={blockTypesByKey[block.type]}
-            component={blockComponents?.[block.type]}
-            renderers={renderers}
-            previews={previews}
-            icons={icons}
-            errors={errors}
-            errorPath={String(index)}
-            dragProps={canEditBlockList ? getDragProps(index) : undefined}
-            onChange={(next) => updateBlock(index, next)}
-            onDelete={
-              canEditBlockList ? () => setPendingDeleteIndex(index) : undefined
-            }
-          />
-        ))}
+        {blocks.map((block, index) => {
+          const key = keysRef.current[index];
+          if (key === undefined) {
+            throw new Error(`Block ${index} has no key`);
+          }
+          return (
+            <div
+              key={key}
+              ref={(element) => {
+                if (element) blockElementsRef.current.set(key, element);
+                else blockElementsRef.current.delete(key);
+              }}
+            >
+              <BlockCard
+                block={block}
+                blockType={blockTypesByKey[block.type]}
+                component={blockComponents?.[block.type]}
+                renderers={renderers}
+                previews={previews}
+                icons={icons}
+                errors={errors}
+                errorPath={String(index)}
+                dragProps={canEditBlockList ? getDragProps(index) : undefined}
+                onChange={(next) => updateBlock(index, next)}
+                onDelete={
+                  canEditBlockList
+                    ? () => setPendingDeleteIndex(index)
+                    : undefined
+                }
+              />
+            </div>
+          );
+        })}
         {footer}
       </Stack>
       <ConfirmDialog
@@ -157,6 +203,8 @@ export default function BlocksField({
     </>
   );
 }
+
+export default React.forwardRef(BlocksField);
 
 type BlockCardProps = {
   block: Block;
