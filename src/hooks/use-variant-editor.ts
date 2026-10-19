@@ -43,7 +43,7 @@ export type VariantEditorState<
   variants: readonly V[];
   publishable: boolean;
   switcher: DimensionSwitcher<V, D>;
-  form: FormObject<T>;
+  form: FormObject<Partial<T>>;
   guard: UnsavedChangesGuard;
   actions: VariantActionHandlers;
   canTranslate: boolean;
@@ -81,11 +81,15 @@ export default function useVariantEditor<
   if (!initialValue) {
     throw new Error(`Dimension "${dimension.key}" has no options`);
   }
+  const paramValue = getParams()[dimension.key];
+  const isKnownValue = dimension.options.some(
+    (option) => option.value === paramValue,
+  );
 
   const switcher = useDimensionSwitcher<V, D>({
     dimension,
     variants,
-    value: getParams()[dimension.key] ?? initialValue,
+    value: isKnownValue && paramValue ? paramValue : initialValue,
     onValueChange: (next) => setParams({ [dimension.key]: next }),
     publishable,
   });

@@ -22,7 +22,7 @@ export default function useVariantForm<T extends Record<string, unknown>>({
   savedValues,
   resetKey,
   onSubmit,
-}: UseVariantFormOptions<T>): FormObject<T> {
+}: UseVariantFormOptions<T>): FormObject<Partial<T>> {
   const form = useForm<Partial<T>>({
     defaultValues: {},
     pristineValues: savedValues,
@@ -32,8 +32,7 @@ export default function useVariantForm<T extends Record<string, unknown>>({
   const { reset } = form;
   useIsomorphicLayoutEffect(() => {
     reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetKey]);
 
-  return form as FormObject<T>;
+  return form;
 }

@@ -116,10 +116,7 @@ export default function useVariantActions<V extends VariantBase>({
       const response = await callApi(currentVariant['@id'], {
         method: 'DELETE',
       });
-      if (!response) {
-        toast.error(`Failed to delete ${entityLabel}`);
-        return false;
-      }
+      if (!response) return false;
       if (variants.length === 1) {
         toast.success(`${entityLabel} deleted`);
         push(listPath);
