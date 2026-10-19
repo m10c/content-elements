@@ -2,7 +2,7 @@
 
 import React from 'react';
 
-import type { VariantEditorConfig } from '../types';
+import type { CallApi, VariantEditorConfig } from '../types';
 
 const VariantEditorContext = React.createContext<VariantEditorConfig | null>(
   null,
@@ -12,21 +12,31 @@ type Props = VariantEditorConfig & {
   children: React.ReactNode;
 };
 
-export function VariantEditorProvider({ children, ...value }: Props) {
-  const memoed = React.useMemo(
-    () => value,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      value.callApi,
-      value.toast,
-      value.push,
-      value.getParams,
-      value.setParams,
-      value.defaultDimension,
-    ],
+export function VariantEditorProvider({
+  children,
+  getParams,
+  defaultDimension,
+  ...actions
+}: Props) {
+  const actionsRef = React.useRef(actions);
+  actionsRef.current = actions;
+
+  const value = React.useMemo<VariantEditorConfig>(
+    () => ({
+      callApi: <R,>(...args: Parameters<CallApi>) =>
+        actionsRef.current.callApi<R>(...args),
+      toast: {
+        success: (message) => actionsRef.current.toast.success(message),
+      },
+      push: (href) => actionsRef.current.push(href),
+      setParams: (next) => actionsRef.current.setParams(next),
+      getParams,
+      defaultDimension,
+    }),
+    [getParams, defaultDimension],
   );
   return (
-    <VariantEditorContext.Provider value={memoed}>
+    <VariantEditorContext.Provider value={value}>
       {children}
     </VariantEditorContext.Provider>
   );

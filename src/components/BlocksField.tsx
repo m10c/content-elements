@@ -59,6 +59,7 @@ type Props = {
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
   errors?: BlockErrors;
+  /** Must be stable components - a new component type remounts its blocks and loses input focus */
   blockComponents?: Record<string, React.ComponentType<BlockComponentProps>>;
   canEditBlockList?: boolean;
   header?: React.ReactNode;

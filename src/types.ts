@@ -175,7 +175,6 @@ export type VariantEditorConfig = {
   callApi: CallApi;
   toast: {
     success: (message: string) => void;
-    error: (message: string) => void;
   };
   push: (href: string) => void;
   getParams: () => Record<string, string | undefined>;

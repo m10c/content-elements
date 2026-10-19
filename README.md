@@ -59,7 +59,15 @@ Mount `VariantEditorProvider` once at the admin app's root, passing in its
 toasts and router:
 
 ```typescript
-import { VariantEditorProvider } from '@m10c/content-elements';
+import { type Dimension, VariantEditorProvider } from '@m10c/content-elements';
+
+const LOCALE_DIMENSION: Dimension = {
+  key: 'locale',
+  label: 'Language',
+  pluralLabel: 'Languages',
+  options: localeOptions,
+  translatable: true,
+};
 
 <VariantEditorProvider
   callApi={callApi}
@@ -67,13 +75,7 @@ import { VariantEditorProvider } from '@m10c/content-elements';
   push={(href) => router.push(href)}
   getParams={getParams}
   setParams={(next) => router.push(modifiedLink(next))}
-  defaultDimension={{
-    key: 'locale',
-    label: 'Language',
-    pluralLabel: 'Languages',
-    options: localeOptions,
-    translatable: true,
-  }}
+  defaultDimension={LOCALE_DIMENSION}
 >
 ```
 
