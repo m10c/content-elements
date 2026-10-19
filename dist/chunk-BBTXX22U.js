@@ -1,6 +1,3 @@
-// src/hooks/use-preview-sender.ts
-import { useCallback, useEffect, useRef } from "react";
-
 // src/constants/preview-device-widths.ts
 var PREVIEW_DEVICE_WIDTHS = {
   desktop: 1280,
@@ -17,6 +14,7 @@ var PREVIEW_MESSAGE = {
 var preview_message_default = PREVIEW_MESSAGE;
 
 // src/hooks/use-preview-sender.ts
+import { useCallback, useEffect, useRef } from "react";
 var getOrigin = (url) => {
   try {
     return new URL(url).origin;
@@ -143,4 +141,4 @@ export {
   useWebsiteGlobalData,
   useWebsitePageData
 };
-//# sourceMappingURL=chunk-ZGUSUBFS.js.map
+//# sourceMappingURL=chunk-BBTXX22U.js.map

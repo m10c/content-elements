@@ -4,7 +4,7 @@ import {
   usePreviewSender,
   useWebsiteGlobalData,
   useWebsitePageData
-} from "./chunk-ZGUSUBFS.js";
+} from "./chunk-BBTXX22U.js";
 
 // src/components/AddBlockDialog.tsx
 import CloseIcon from "@mui/icons-material/Close";
@@ -1667,20 +1667,28 @@ import { jsx as jsx15 } from "react/jsx-runtime";
 var VariantEditorContext = React7.createContext(
   null
 );
-function VariantEditorProvider({ children, ...value }) {
-  const memoed = React7.useMemo(
-    () => value,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      value.callApi,
-      value.toast,
-      value.push,
-      value.getParams,
-      value.setParams,
-      value.defaultDimension
-    ]
+function VariantEditorProvider({
+  children,
+  getParams,
+  defaultDimension,
+  ...actions
+}) {
+  const actionsRef = React7.useRef(actions);
+  actionsRef.current = actions;
+  const value = React7.useMemo(
+    () => ({
+      callApi: (...args) => actionsRef.current.callApi(...args),
+      toast: {
+        success: (message) => actionsRef.current.toast.success(message)
+      },
+      push: (href) => actionsRef.current.push(href),
+      setParams: (next) => actionsRef.current.setParams(next),
+      getParams,
+      defaultDimension
+    }),
+    [getParams, defaultDimension]
   );
-  return /* @__PURE__ */ jsx15(VariantEditorContext.Provider, { value: memoed, children });
+  return /* @__PURE__ */ jsx15(VariantEditorContext.Provider, { value, children });
 }
 function useVariantEditorContext() {
   const context = React7.useContext(VariantEditorContext);
@@ -1692,8 +1700,8 @@ function useVariantEditorContext() {
   return context;
 }
 
-// src/hooks/use-variant-editor.ts
-import React9 from "react";
+// src/hooks/use-dimension-switcher.ts
+import { useApiRead } from "api-read-hook";
 
 // src/utils/dimension-value.ts
 function dimensionValue(variant, key) {
@@ -1703,9 +1711,6 @@ function dimensionValue(variant, key) {
   }
   return String(value);
 }
-
-// src/hooks/use-dimension-switcher.ts
-import { useApiRead } from "api-read-hook";
 
 // src/utils/publish-status-chip.ts
 import { format as format2, isFuture, parseISO as parseISO2 } from "date-fns";
@@ -1884,10 +1889,7 @@ function useVariantActions({
       const response = await callApi(currentVariant["@id"], {
         method: "DELETE"
       });
-      if (!response) {
-        toast.error(`Failed to delete ${entityLabel}`);
-        return false;
-      }
+      if (!response) return false;
       if (variants.length === 1) {
         toast.success(`${entityLabel} deleted`);
         push(listPath);
@@ -1900,6 +1902,9 @@ function useVariantActions({
     invalidate
   };
 }
+
+// src/hooks/use-variant-editor.ts
+import React9 from "react";
 
 // src/hooks/use-variant-form.ts
 import React8 from "react";
@@ -1941,10 +1946,14 @@ function useVariantEditor({
   if (!initialValue) {
     throw new Error(`Dimension "${dimension.key}" has no options`);
   }
+  const paramValue = getParams()[dimension.key];
+  const isKnownValue = dimension.options.some(
+    (option) => option.value === paramValue
+  );
   const switcher = useDimensionSwitcher({
     dimension,
     variants,
-    value: getParams()[dimension.key] ?? initialValue,
+    value: isKnownValue && paramValue ? paramValue : initialValue,
     onValueChange: (next) => setParams({ [dimension.key]: next }),
     publishable
   });
@@ -2042,12 +2051,18 @@ export {
   VariantEditorProvider,
   createBlock,
   dimensionValue,
+  emptyFieldValue,
   moveItem,
+  publishStatusChip,
+  useDimensionSwitcher,
   useDragReorder,
   useDraggableByHandle,
   usePreviewSender,
+  useUnsavedChangesGuard,
+  useVariantActions,
   useVariantEditor,
   useVariantEditorContext,
+  useVariantForm,
   useWebsiteGlobalData,
   useWebsitePageData
 };

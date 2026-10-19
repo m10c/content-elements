@@ -1,8 +1,8 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import React$1 from 'react';
 import { CardProps } from '@mui/material';
-import { FieldProp, FormObject } from 'react-typed-form';
-export { UseWebsitePageDataResult, usePreviewSender, useWebsiteGlobalData, useWebsitePageData } from './hooks.js';
+import { FieldProp, FormObject, useForm } from 'react-typed-form';
+export { usePreviewSender, useWebsiteGlobalData, useWebsitePageData } from './hooks.js';
 
 declare const PREVIEW_DEVICE_WIDTHS: Record<PreviewDevice, number>;
 
@@ -154,7 +154,6 @@ type VariantEditorConfig = {
     callApi: CallApi;
     toast: {
         success: (message: string) => void;
-        error: (message: string) => void;
     };
     push: (href: string) => void;
     getParams: () => Record<string, string | undefined>;
@@ -221,6 +220,7 @@ type Props$c = {
     previews?: BlockFieldPreviews;
     icons?: ListCardIcons;
     errors?: BlockErrors;
+    /** Must be stable components - a new component type remounts its blocks and loses input focus */
     blockComponents?: Record<string, React$1.ComponentType<BlockComponentProps>>;
     canEditBlockList?: boolean;
     header?: React$1.ReactNode;
@@ -367,20 +367,16 @@ declare function UnsavedChangesDialog({ open, onClose, onSave, onContinueWithout
 type Props = VariantEditorConfig & {
     children: React$1.ReactNode;
 };
-declare function VariantEditorProvider({ children, ...value }: Props): react_jsx_runtime.JSX.Element;
+declare function VariantEditorProvider({ children, getParams, defaultDimension, ...actions }: Props): react_jsx_runtime.JSX.Element;
 declare function useVariantEditorContext(): VariantEditorConfig;
 
-declare function useDragReorder(onMove: (from: number, to: number) => void): (index: number) => DragRowProps;
-
-declare function useDraggableByHandle(): {
-    isDraggable: boolean;
-    stopDragging: () => void;
-    handleProps: {
-        onMouseDown: () => void;
-        onMouseUp: () => void;
-    };
+type Options$2<V extends VariantBase> = {
+    dimension: Dimension;
+    variants: readonly V[];
+    value: string;
+    onValueChange: (value: string) => void;
+    publishable?: boolean;
 };
-
 type DimensionSwitcher<V extends VariantBase, D extends VariantDetailBase> = {
     dimension: Dimension;
     value: string;
@@ -395,7 +391,23 @@ type DimensionSwitcher<V extends VariantBase, D extends VariantDetailBase> = {
     getLabel: (value: string) => string;
     getChips: (value: string) => DimensionChip[];
 };
+declare function useDimensionSwitcher<V extends VariantBase, D extends VariantDetailBase>({ dimension, variants, value, onValueChange, publishable, }: Options$2<V>): DimensionSwitcher<V, D>;
 
+declare function useDragReorder(onMove: (from: number, to: number) => void): (index: number) => DragRowProps;
+
+declare function useDraggableByHandle(): {
+    isDraggable: boolean;
+    stopDragging: () => void;
+    handleProps: {
+        onMouseDown: () => void;
+        onMouseUp: () => void;
+    };
+};
+
+type Options$1 = {
+    hasUnsavedChanges: boolean;
+    onSave: () => Promise<boolean>;
+};
 type UnsavedChangesGuard = {
     guard: (action: () => void) => void;
     guardNavigate: (navigate: () => void) => Promise<boolean>;
@@ -404,10 +416,21 @@ type UnsavedChangesGuard = {
     handlePending: (save: boolean) => Promise<void>;
     dismissPending: () => void;
 };
+declare function useUnsavedChangesGuard({ hasUnsavedChanges, onSave, }: Options$1): UnsavedChangesGuard;
 
 type SubmitHelpers = {
     addSubmitError: (field: string, error: string) => void;
     setLoading: (loading: boolean) => void;
+};
+type Options<V extends VariantBase> = {
+    identityIri: string;
+    variantsPath: string;
+    entityLabel: string;
+    listPath: string;
+    dimension: Dimension;
+    variants: readonly V[];
+    value: string;
+    currentVariant: V | null;
 };
 type VariantActionHandlers = {
     translate: (fields: string[], source: VariantBase) => Promise<Translations | null>;
@@ -417,6 +440,7 @@ type VariantActionHandlers = {
     remove: () => Promise<boolean>;
     invalidate: () => void;
 };
+declare function useVariantActions<V extends VariantBase>({ identityIri, variantsPath, entityLabel, listPath, dimension, variants, value, currentVariant, }: Options<V>): VariantActionHandlers;
 
 type UseVariantEditorOptions<V extends VariantBase, D extends VariantDetailBase, T extends Record<string, unknown>> = {
     identityIri: string;
@@ -435,7 +459,7 @@ type VariantEditorState<V extends VariantBase, D extends VariantDetailBase, T ex
     variants: readonly V[];
     publishable: boolean;
     switcher: DimensionSwitcher<V, D>;
-    form: FormObject<T>;
+    form: FormObject<Partial<T>>;
     guard: UnsavedChangesGuard;
     actions: VariantActionHandlers;
     canTranslate: boolean;
@@ -448,10 +472,24 @@ type VariantEditorState<V extends VariantBase, D extends VariantDetailBase, T ex
 };
 declare function useVariantEditor<V extends VariantBase, D extends VariantDetailBase, T extends Record<string, unknown>>({ identityIri, variantsPath, entityLabel, listPath, variants, toFormValues, dimension: dimensionOverride, publishable, postValidateTransform, }: UseVariantEditorOptions<V, D, T>): VariantEditorState<V, D, T>;
 
+type FormObjectSubmit<T extends Record<string, unknown>> = Parameters<typeof useForm<T>>[0] extends {
+    onSubmit: infer S;
+} ? S : never;
+type UseVariantFormOptions<T extends Record<string, unknown>> = {
+    savedValues: T;
+    resetKey: string;
+    onSubmit: FormObjectSubmit<Partial<T>>;
+};
+declare function useVariantForm<T extends Record<string, unknown>>({ savedValues, resetKey, onSubmit, }: UseVariantFormOptions<T>): FormObject<Partial<T>>;
+
 declare function createBlock(blockType: BlockType): Block;
 
 declare function dimensionValue(variant: VariantBase, key: string): string;
 
+declare function emptyFieldValue(fieldDef: BlockTypeField): false | "" | never[];
+
 declare function moveItem<T>(items: readonly T[], from: number, to: number): T[];
 
-export { AddBlockDialog, type Block, BlockCardFrame, type BlockComponentProps, type BlockErrors, type BlockFieldPreview, type BlockFieldPreviews, type BlockFieldRenderer, type BlockFieldRendererProps, type BlockFieldRenderers, type BlockType, type BlockTypeField, type BlockTypeInput, _default as BlocksField, type BlocksFieldHandle, type CallApi, ConfirmDialog, type Dimension, type DimensionChip, type DimensionOption, DimensionSelect, type DragRowProps, type ListCardIcons, type ListField, LivePreview, PREVIEW_DEVICE_WIDTHS, PREVIEW_MESSAGE, PageEditor, type PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, type PreviewMessage, PreviewToggleButton, PublishState, SeoEditor, type SimpleField, type SimpleFieldKind, type Translations, UnsavedChangesDialog, type UseVariantEditorOptions, type VariantBase, type VariantDetailBase, type VariantEditorConfig, VariantEditorProvider, type VariantEditorState, createBlock, dimensionValue, moveItem, useDragReorder, useDraggableByHandle, useVariantEditor, useVariantEditorContext };
+declare function publishStatusChip(publishAt: string | null | undefined): DimensionChip;
+
+export { AddBlockDialog, type Block, BlockCardFrame, type BlockComponentProps, type BlockErrors, type BlockFieldPreview, type BlockFieldPreviews, type BlockFieldRenderer, type BlockFieldRendererProps, type BlockFieldRenderers, type BlockType, type BlockTypeField, type BlockTypeInput, _default as BlocksField, type BlocksFieldHandle, type CallApi, ConfirmDialog, type Dimension, type DimensionChip, type DimensionOption, DimensionSelect, type DragRowProps, type ListCardIcons, type ListField, LivePreview, PREVIEW_DEVICE_WIDTHS, PREVIEW_MESSAGE, PageEditor, type PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, type PreviewMessage, PreviewToggleButton, PublishState, SeoEditor, type SimpleField, type SimpleFieldKind, type Translations, UnsavedChangesDialog, type VariantBase, type VariantDetailBase, type VariantEditorConfig, VariantEditorProvider, createBlock, dimensionValue, emptyFieldValue, moveItem, publishStatusChip, useDimensionSwitcher, useDragReorder, useDraggableByHandle, useUnsavedChangesGuard, useVariantActions, useVariantEditor, useVariantEditorContext, useVariantForm };

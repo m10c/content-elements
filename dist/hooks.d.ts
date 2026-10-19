@@ -36,4 +36,4 @@ type UseWebsiteGlobalDataConfig = {
 };
 declare function useWebsiteGlobalData(config: UseWebsiteGlobalDataConfig): UseWebsitePageDataResult;
 
-export { type UseWebsitePageDataResult, usePreviewSender, useWebsiteGlobalData, useWebsitePageData };
+export { usePreviewSender, useWebsiteGlobalData, useWebsitePageData };
