@@ -10,6 +10,8 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   external: [
+    '@dnd-kit/core',
+    '@dnd-kit/sortable',
     'react',
     'react-dom',
     'react-typed-form',

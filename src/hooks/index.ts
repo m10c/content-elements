@@ -1,8 +1,8 @@
 // Admin barrel. Website-safe hooks must also be added to src/website.ts (the `/hooks` entry)
 export { default as useDimensionSwitcher } from './use-dimension-switcher';
-export { default as useDragReorder } from './use-drag-reorder';
-export { default as useDraggableByHandle } from './use-draggable-by-handle';
+export { default as useListKeys } from './use-list-keys';
 export { default as usePreviewSender } from './use-preview-sender';
+export { default as useSortableItem } from './use-sortable-item';
 export { default as useUnsavedChangesGuard } from './use-unsaved-changes-guard';
 export { default as useVariantActions } from './use-variant-actions';
 export { default as useVariantEditor } from './use-variant-editor';

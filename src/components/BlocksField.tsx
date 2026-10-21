@@ -24,15 +24,15 @@ import { FieldRadioGroup, FieldSwitch, FieldText } from '@m10c/mui-kit';
 import React from 'react';
 import { FieldProp } from 'react-typed-form';
 
-import useDragReorder from '../hooks/use-drag-reorder';
-import useDraggableByHandle from '../hooks/use-draggable-by-handle';
+import useListKeys from '../hooks/use-list-keys';
+import useSortableItem from '../hooks/use-sortable-item';
 import emptyFieldValue from '../utils/empty-field-value';
 import moveItem from '../utils/move-item';
 import BlockCardFrame from './BlockCardFrame';
 import ConfirmDialog from './ConfirmDialog';
+import SortableList from './SortableList';
 import type {
   BlockComponentProps,
-  DragRowProps,
   Block,
   BlockErrors,
   BlockFieldPreviews,
@@ -106,13 +106,7 @@ function BlocksField(
     [],
   );
 
-  const nextKeyRef = React.useRef(0);
-  const keysRef = React.useRef<string[]>([]);
-  if (keysRef.current.length !== blocks.length) {
-    keysRef.current = blocks.map(
-      (_, index) => keysRef.current[index] ?? `block-${nextKeyRef.current++}`,
-    );
-  }
+  const { keys, moveKey, removeKey } = useListKeys(blocks.length);
   // The boundary types `fields` as `unknown` (see BlockTypeInput); the BE sends
   // the rich field metadata, so narrow to BlockType here, the single point of
   // truth for the shape the renderers below depend on.
@@ -131,44 +125,44 @@ function BlocksField(
   }
 
   function deleteBlock(index: number) {
-    keysRef.current = keysRef.current.filter((_, i) => i !== index);
+    removeKey(index);
     field.handleValueChange(blocks.filter((_, i) => i !== index));
   }
 
-  const getDragProps = useDragReorder((from, to) => {
-    keysRef.current = moveItem(keysRef.current, from, to);
+  function moveBlock(from: number, to: number) {
+    moveKey(from, to);
     field.handleValueChange(moveItem(blocks, from, to));
-  });
+  }
 
   React.useEffect(() => {
     if (pendingScrollIndex === null) return;
     setPendingScrollIndex(null);
-    const key = keysRef.current[pendingScrollIndex];
+    const key = keys[pendingScrollIndex];
     if (key === undefined) return;
     blockElementsRef.current
       .get(key)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [pendingScrollIndex]);
+  }, [keys, pendingScrollIndex]);
 
   return (
     <>
       <Stack spacing={canEditBlockList ? 3 : 2}>
         {header}
         {blocks.length === 0 && emptyState}
-        {blocks.map((block, index) => {
-          const key = keysRef.current[index];
-          if (key === undefined) {
-            throw new Error(`Block ${index} has no key`);
-          }
-          return (
-            <div
-              key={key}
-              ref={(element) => {
-                if (element) blockElementsRef.current.set(key, element);
-                else blockElementsRef.current.delete(key);
-              }}
-            >
+        <SortableList ids={keys} onMove={moveBlock}>
+          {blocks.map((block, index) => {
+            const key = keys[index];
+            if (key === undefined) {
+              throw new Error(`Block ${index} has no key`);
+            }
+            return (
               <BlockCard
+                key={key}
+                sortableId={key}
+                elementRef={(element) => {
+                  if (element) blockElementsRef.current.set(key, element);
+                  else blockElementsRef.current.delete(key);
+                }}
                 block={block}
                 blockType={blockTypesByKey[block.type]}
                 component={blockComponents?.[block.type]}
@@ -177,7 +171,7 @@ function BlocksField(
                 icons={icons}
                 errors={errors}
                 errorPath={String(index)}
-                dragProps={canEditBlockList ? getDragProps(index) : undefined}
+                canReorder={canEditBlockList}
                 onChange={(next) => updateBlock(index, next)}
                 onDelete={
                   canEditBlockList
@@ -185,9 +179,9 @@ function BlocksField(
                     : undefined
                 }
               />
-            </div>
-          );
-        })}
+            );
+          })}
+        </SortableList>
         {footer}
       </Stack>
       <ConfirmDialog
@@ -208,6 +202,8 @@ function BlocksField(
 export default React.forwardRef(BlocksField);
 
 type BlockCardProps = {
+  sortableId: string;
+  elementRef: (element: HTMLElement | null) => void;
   block: Block;
   blockType: BlockType | undefined;
   component?: React.ComponentType<BlockComponentProps>;
@@ -216,12 +212,14 @@ type BlockCardProps = {
   icons?: ListCardIcons;
   errors?: BlockErrors;
   errorPath: string;
-  dragProps?: DragRowProps;
+  canReorder: boolean;
   onChange: (next: Block) => void;
   onDelete?: () => void;
 };
 
 function BlockCard({
+  sortableId,
+  elementRef,
   block,
   blockType,
   component: BlockComponent,
@@ -230,11 +228,11 @@ function BlockCard({
   icons,
   errors,
   errorPath,
-  dragProps,
+  canReorder,
   onChange,
   onDelete,
 }: BlockCardProps) {
-  const { isDraggable, stopDragging, handleProps } = useDraggableByHandle();
+  const { itemProps, handleProps } = useSortableItem(sortableId, !canReorder);
   const [headerActionContainer, setHeaderActionContainer] =
     React.useState<HTMLElement | null>(null);
 
@@ -311,22 +309,14 @@ function BlockCard({
     </Typography>
   );
 
-  if (dragProps || onDelete) {
-    return (
+  const card =
+    canReorder || onDelete ? (
       <BlockCardFrame
-        draggable={isDraggable}
-        onDragStart={dragProps?.onDragStart}
-        onDragEnd={() => {
-          stopDragging();
-          dragProps?.onDragEnd();
-        }}
-        onDragOver={dragProps?.onDragOver}
-        onDrop={dragProps?.onDrop}
         gutter={
-          dragProps && (
+          canReorder && (
             <Box
               {...handleProps}
-              sx={{ display: 'flex', color: 'primary.main', cursor: 'grab' }}
+              sx={{ display: 'flex', color: 'primary.main' }}
             >
               {icons?.drag ?? <DragIndicatorIcon />}
             </Box>
@@ -350,18 +340,27 @@ function BlockCard({
       >
         {body}
       </BlockCardFrame>
+    ) : (
+      <Card>
+        <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+          <Stack spacing={2}>
+            {showLabel && <Typography variant="subtitle1">{label}</Typography>}
+            {body}
+          </Stack>
+        </CardContent>
+      </Card>
     );
-  }
 
   return (
-    <Card>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack spacing={2}>
-          {showLabel && <Typography variant="subtitle1">{label}</Typography>}
-          {body}
-        </Stack>
-      </CardContent>
-    </Card>
+    <div
+      ref={(element) => {
+        itemProps.ref(element);
+        elementRef(element);
+      }}
+      style={itemProps.style}
+    >
+      {card}
+    </div>
   );
 }
 
@@ -764,13 +763,17 @@ function ListCards({
     onChange(updated);
   }
 
+  const { keys, moveKey, removeKey } = useListKeys(items.length);
+
   function deleteItem(index: number) {
+    removeKey(index);
     onChange(items.filter((_, i) => i !== index));
   }
 
-  const getDragProps = useDragReorder((from, to) =>
-    onChange(moveItem(items, from, to)),
-  );
+  function moveListItem(from: number, to: number) {
+    moveKey(from, to);
+    onChange(moveItem(items, from, to));
+  }
 
   return (
     <Stack spacing={1.5}>
@@ -803,18 +806,26 @@ function ListCards({
 
       {headerSlot}
 
-      {items.map((item, index) => (
-        <ListItemCard
-          key={index}
-          fieldDef={fieldDef}
-          item={item}
-          previews={previews}
-          icons={icons}
-          errors={itemErrors(index)}
-          onEdit={() => setEditedIndex(index)}
-          dragProps={getDragProps(index)}
-        />
-      ))}
+      <SortableList ids={keys} onMove={moveListItem}>
+        {items.map((item, index) => {
+          const key = keys[index];
+          if (key === undefined) {
+            throw new Error(`List item ${index} has no key`);
+          }
+          return (
+            <ListItemCard
+              key={key}
+              sortableId={key}
+              fieldDef={fieldDef}
+              item={item}
+              previews={previews}
+              icons={icons}
+              errors={itemErrors(index)}
+              onEdit={() => setEditedIndex(index)}
+            />
+          );
+        })}
+      </SortableList>
 
       {editedIndex !== null && editedItem !== undefined && (
         <ListItemDialog
@@ -859,45 +870,35 @@ function ListCards({
 }
 
 type ListItemCardProps = {
+  sortableId: string;
   fieldDef: ListField;
   item: ListItem;
   previews?: BlockFieldPreviews;
   icons?: ListCardIcons;
   errors?: Record<string, string>;
   onEdit: () => void;
-  dragProps: DragRowProps;
 };
 
 function ListItemCard({
+  sortableId,
   fieldDef,
   item,
   previews,
   icons,
   errors,
   onEdit,
-  dragProps,
 }: ListItemCardProps) {
-  const { isDraggable, stopDragging, handleProps } = useDraggableByHandle();
+  const { itemProps, handleProps } = useSortableItem(sortableId);
 
   return (
     <Stack
+      {...itemProps}
       direction="row"
       spacing={1}
       alignItems="flex-start"
-      draggable={isDraggable}
-      onDragStart={dragProps.onDragStart}
-      onDragEnd={() => {
-        stopDragging();
-        dragProps.onDragEnd();
-      }}
-      onDragOver={dragProps.onDragOver}
-      onDrop={dragProps.onDrop}
       sx={{ p: 2, borderRadius: 1, bgcolor: 'grey.100' }}
     >
-      <Box
-        {...handleProps}
-        sx={{ display: 'flex', color: 'primary.main', cursor: 'grab' }}
-      >
+      <Box {...handleProps} sx={{ display: 'flex', color: 'primary.main' }}>
         {icons?.drag ?? <DragIndicatorIcon fontSize="small" />}
       </Box>
       <Stack spacing={1.5} sx={{ flex: 1, minWidth: 0 }}>
