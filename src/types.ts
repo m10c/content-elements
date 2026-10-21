@@ -200,13 +200,6 @@ export type PreviewMessage = {
   globals?: Record<string, unknown>;
 };
 
-export type DragRowProps = {
-  onDragStart: (event: React.DragEvent) => void;
-  onDragEnd: () => void;
-  onDragOver: (event: React.DragEvent) => void;
-  onDrop: () => void;
-};
-
 export type BlockComponentProps = {
   block: Block;
   onChange: (data: Record<string, unknown>) => void;

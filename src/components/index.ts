@@ -15,4 +15,5 @@ export { default as PreviewLayout } from './PreviewLayout';
 export { default as PreviewToggleButton } from './PreviewToggleButton';
 export { default as PublishState } from './PublishState';
 export { default as SeoEditor } from './SeoEditor';
+export { default as SortableList } from './SortableList';
 export { default as UnsavedChangesDialog } from './UnsavedChangesDialog';
