@@ -175,12 +175,6 @@ type PreviewMessage = {
     pagePath?: string;
     globals?: Record<string, unknown>;
 };
-type DragRowProps = {
-    onDragStart: (event: React.DragEvent) => void;
-    onDragEnd: () => void;
-    onDragOver: (event: React.DragEvent) => void;
-    onDrop: () => void;
-};
 type BlockComponentProps = {
     block: Block;
     onChange: (data: Record<string, unknown>) => void;
@@ -189,7 +183,7 @@ type BlockComponentProps = {
     headerActionContainer: HTMLElement | null;
 };
 
-type Props$e = {
+type Props$f = {
     open: boolean;
     onClose: () => void;
     blockTypes: readonly BlockTypeInput[];
@@ -197,15 +191,15 @@ type Props$e = {
     icons?: Record<string, React$1.ReactNode>;
     title?: string;
 };
-declare function AddBlockDialog({ open, onClose, blockTypes, onSelect, icons, title, }: Props$e): react_jsx_runtime.JSX.Element;
+declare function AddBlockDialog({ open, onClose, blockTypes, onSelect, icons, title, }: Props$f): react_jsx_runtime.JSX.Element;
 
-type Props$d = Omit<CardProps, 'title'> & {
+type Props$e = Omit<CardProps, 'title'> & {
     gutter?: React$1.ReactNode;
     title?: React$1.ReactNode;
     action?: React$1.ReactNode;
     children?: React$1.ReactNode;
 };
-declare function BlockCardFrame({ gutter, title, action, children, sx, ...cardProps }: Props$d): react_jsx_runtime.JSX.Element;
+declare function BlockCardFrame({ gutter, title, action, children, sx, ...cardProps }: Props$e): react_jsx_runtime.JSX.Element;
 
 /** Icons a consumer can swap for its own icon set. */
 type ListCardIcons = {
@@ -213,7 +207,7 @@ type ListCardIcons = {
     edit?: React$1.ReactNode;
     delete?: React$1.ReactNode;
 };
-type Props$c = {
+type Props$d = {
     blockTypes: readonly BlockTypeInput[];
     field: FieldProp<Block[]>;
     renderers?: BlockFieldRenderers;
@@ -234,9 +228,9 @@ type BlocksFieldHandle = {
      */
     scrollToBlock: (index: number) => void;
 };
-declare const _default: React$1.ForwardRefExoticComponent<Props$c & React$1.RefAttributes<BlocksFieldHandle>>;
+declare const _default: React$1.ForwardRefExoticComponent<Props$d & React$1.RefAttributes<BlocksFieldHandle>>;
 
-type Props$b = {
+type Props$c = {
     open: boolean;
     title: string;
     description: React$1.ReactNode;
@@ -248,9 +242,9 @@ type Props$b = {
     onClose: () => void;
     onConfirm: () => void;
 };
-declare function ConfirmDialog({ open, title, description, subtitle, warning, confirmText, confirmColor, isLoading, onClose, onConfirm, }: Props$b): react_jsx_runtime.JSX.Element;
+declare function ConfirmDialog({ open, title, description, subtitle, warning, confirmText, confirmColor, isLoading, onClose, onConfirm, }: Props$c): react_jsx_runtime.JSX.Element;
 
-type Props$a = {
+type Props$b = {
     value: string;
     options: readonly DimensionOption[];
     onChange: (value: string) => void;
@@ -259,9 +253,9 @@ type Props$a = {
     placeholder?: string;
     disabled?: boolean;
 };
-declare function DimensionSelect({ value, options, onChange, getChips, label, placeholder, disabled, }: Props$a): react_jsx_runtime.JSX.Element;
+declare function DimensionSelect({ value, options, onChange, getChips, label, placeholder, disabled, }: Props$b): react_jsx_runtime.JSX.Element;
 
-type Props$9 = {
+type Props$a = {
     previewUrl: string;
     src: string;
     content: Record<string, unknown>;
@@ -270,9 +264,9 @@ type Props$9 = {
     globals?: Record<string, unknown>;
     title?: string;
 };
-declare function LivePreview({ previewUrl, src, content, renderWidth, pagePath, globals, title, }: Props$9): react_jsx_runtime.JSX.Element;
+declare function LivePreview({ previewUrl, src, content, renderWidth, pagePath, globals, title, }: Props$a): react_jsx_runtime.JSX.Element;
 
-type Props$8 = {
+type Props$9 = {
     blockTypes: readonly BlockTypeInput[];
     field: FieldProp<Block[]>;
     renderers?: BlockFieldRenderers;
@@ -294,47 +288,47 @@ type Props$8 = {
     publishDisabled?: boolean;
     onPublish: () => void;
 };
-declare function PageEditor({ blockTypes, field, renderers, previews, icons, errors, deviceLabels, previewUrl, pagePath, previewPath, previewContent, globalPagePaths, isSaving, publishDisabled, onPublish, }: Props$8): react_jsx_runtime.JSX.Element;
+declare function PageEditor({ blockTypes, field, renderers, previews, icons, errors, deviceLabels, previewUrl, pagePath, previewPath, previewContent, globalPagePaths, isSaving, publishDisabled, onPublish, }: Props$9): react_jsx_runtime.JSX.Element;
 
-type Props$7 = {
+type Props$8 = {
     value: PreviewDevice;
     onChange: (device: PreviewDevice) => void;
     labels?: Partial<Record<PreviewDevice, string>>;
 };
-declare function PreviewDeviceSelect({ value, onChange, labels, }: Props$7): react_jsx_runtime.JSX.Element;
+declare function PreviewDeviceSelect({ value, onChange, labels, }: Props$8): react_jsx_runtime.JSX.Element;
 
-type Props$6 = {
+type Props$7 = {
     iframeRef: React$1.RefObject<HTMLIFrameElement | null>;
     src: string;
     renderWidth: number;
     title?: string;
 };
-declare function PreviewIframe({ iframeRef, src, renderWidth, title, }: Props$6): react_jsx_runtime.JSX.Element | null;
+declare function PreviewIframe({ iframeRef, src, renderWidth, title, }: Props$7): react_jsx_runtime.JSX.Element | null;
 
-type Props$5 = {
+type Props$6 = {
     children: React$1.ReactNode;
     preview: React$1.ReactNode;
     previewToolbar?: React$1.ReactNode;
     previewWidth?: number;
 };
-declare function PreviewLayout({ children, preview, previewToolbar, previewWidth, }: Props$5): react_jsx_runtime.JSX.Element;
+declare function PreviewLayout({ children, preview, previewToolbar, previewWidth, }: Props$6): react_jsx_runtime.JSX.Element;
 
-type Props$4 = {
+type Props$5 = {
     isPreviewVisible: boolean;
     onClick: () => void;
 };
-declare function PreviewToggleButton({ isPreviewVisible, onClick, }: Props$4): react_jsx_runtime.JSX.Element;
+declare function PreviewToggleButton({ isPreviewVisible, onClick, }: Props$5): react_jsx_runtime.JSX.Element;
 
-type Props$3<T extends {
+type Props$4<T extends {
     publishAt: string | null;
 }> = {
     item: T;
 };
 declare function PublishState<T extends {
     publishAt: string | null;
-}>({ item, }: Props$3<T>): react_jsx_runtime.JSX.Element;
+}>({ item, }: Props$4<T>): react_jsx_runtime.JSX.Element;
 
-type Props$2 = {
+type Props$3 = {
     pageTitleField: FieldProp<string | null>;
     descriptionField: FieldProp<string | null>;
     /** Draws the text fields, for an app whose inputs look nothing like these. */
@@ -354,7 +348,14 @@ type Props$2 = {
     publishDisabled?: boolean;
     onPublish: () => void;
 };
-declare function SeoEditor({ pageTitleField, descriptionField, renderers, imageField, renderImageField, imagePreviewUrl, fallbackImageUrl, faviconUrl, fallbackTitle, siteName, isSaving, publishDisabled, onPublish, }: Props$2): react_jsx_runtime.JSX.Element;
+declare function SeoEditor({ pageTitleField, descriptionField, renderers, imageField, renderImageField, imagePreviewUrl, fallbackImageUrl, faviconUrl, fallbackTitle, siteName, isSaving, publishDisabled, onPublish, }: Props$3): react_jsx_runtime.JSX.Element;
+
+type Props$2 = {
+    ids: string[];
+    onMove: (from: number, to: number) => void;
+    children: React$1.ReactNode;
+};
+declare function SortableList({ ids, onMove, children }: Props$2): react_jsx_runtime.JSX.Element;
 
 type Props$1 = {
     open: boolean;
@@ -393,14 +394,34 @@ type DimensionSwitcher<V extends VariantBase, D extends VariantDetailBase> = {
 };
 declare function useDimensionSwitcher<V extends VariantBase, D extends VariantDetailBase>({ dimension, variants, value, onValueChange, publishable, }: Options$2<V>): DimensionSwitcher<V, D>;
 
-declare function useDragReorder(onMove: (from: number, to: number) => void): (index: number) => DragRowProps;
+declare function useListKeys(length: number): {
+    keys: string[];
+    moveKey: (from: number, to: number) => void;
+    removeKey: (index: number) => void;
+};
 
-declare function useDraggableByHandle(): {
-    isDraggable: boolean;
-    stopDragging: () => void;
+declare function useSortableItem(id: string, disabled?: boolean): {
+    itemProps: {
+        ref: (node: HTMLElement | null) => void;
+        style: {
+            transform: string | undefined;
+            transition: string | undefined;
+            position: "relative";
+            zIndex: number | undefined;
+        };
+    };
     handleProps: {
-        onMouseDown: () => void;
-        onMouseUp: () => void;
+        style: {
+            touchAction: string;
+            cursor: string;
+        };
+        role: string;
+        tabIndex: number;
+        'aria-disabled': boolean;
+        'aria-pressed': boolean | undefined;
+        'aria-roledescription': string;
+        'aria-describedby': string;
+        ref: (element: HTMLElement | null) => void;
     };
 };
 
@@ -492,4 +513,4 @@ declare function moveItem<T>(items: readonly T[], from: number, to: number): T[]
 
 declare function publishStatusChip(publishAt: string | null | undefined): DimensionChip;
 
-export { AddBlockDialog, type Block, BlockCardFrame, type BlockComponentProps, type BlockErrors, type BlockFieldPreview, type BlockFieldPreviews, type BlockFieldRenderer, type BlockFieldRendererProps, type BlockFieldRenderers, type BlockType, type BlockTypeField, type BlockTypeInput, _default as BlocksField, type BlocksFieldHandle, type CallApi, ConfirmDialog, type Dimension, type DimensionChip, type DimensionOption, DimensionSelect, type DragRowProps, type ListCardIcons, type ListField, LivePreview, PREVIEW_DEVICE_WIDTHS, PREVIEW_MESSAGE, PageEditor, type PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, type PreviewMessage, PreviewToggleButton, PublishState, SeoEditor, type SimpleField, type SimpleFieldKind, type Translations, UnsavedChangesDialog, type VariantBase, type VariantDetailBase, type VariantEditorConfig, VariantEditorProvider, createBlock, dimensionValue, emptyFieldValue, moveItem, publishStatusChip, useDimensionSwitcher, useDragReorder, useDraggableByHandle, useUnsavedChangesGuard, useVariantActions, useVariantEditor, useVariantEditorContext, useVariantForm };
+export { AddBlockDialog, type Block, BlockCardFrame, type BlockComponentProps, type BlockErrors, type BlockFieldPreview, type BlockFieldPreviews, type BlockFieldRenderer, type BlockFieldRendererProps, type BlockFieldRenderers, type BlockType, type BlockTypeField, type BlockTypeInput, _default as BlocksField, type BlocksFieldHandle, type CallApi, ConfirmDialog, type Dimension, type DimensionChip, type DimensionOption, DimensionSelect, type ListCardIcons, type ListField, LivePreview, PREVIEW_DEVICE_WIDTHS, PREVIEW_MESSAGE, PageEditor, type PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, type PreviewMessage, PreviewToggleButton, PublishState, SeoEditor, type SimpleField, type SimpleFieldKind, SortableList, type Translations, UnsavedChangesDialog, type VariantBase, type VariantDetailBase, type VariantEditorConfig, VariantEditorProvider, createBlock, dimensionValue, emptyFieldValue, moveItem, publishStatusChip, useDimensionSwitcher, useListKeys, useSortableItem, useUnsavedChangesGuard, useVariantActions, useVariantEditor, useVariantEditorContext, useVariantForm };
