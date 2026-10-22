@@ -146,15 +146,7 @@ function BlocksField(
 
   return (
     <>
-      <Stack
-        spacing={canEditBlockList ? 3 : 2}
-        sx={{
-          // Otherwise a block dragged past the end grows the scroll area, which auto-scroll chases.
-          '&:has([aria-roledescription="sortable"][aria-pressed="true"])': {
-            overflowY: 'clip',
-          },
-        }}
-      >
+      <Stack spacing={canEditBlockList ? 3 : 2}>
         {header}
         {blocks.length === 0 && emptyState}
         <SortableList ids={keys} onMove={moveBlock}>

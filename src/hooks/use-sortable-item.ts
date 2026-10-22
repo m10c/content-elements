@@ -20,7 +20,7 @@ export default function useSortableItem(id: string, disabled = false) {
           : undefined,
         transition,
         position: 'relative' as const,
-        zIndex: isDragging ? 1 : undefined,
+        opacity: isDragging ? 0 : undefined,
       },
     },
     // Only the handle starts a drag, so text inside the item stays selectable.

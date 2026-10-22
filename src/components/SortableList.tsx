@@ -15,6 +15,7 @@ import {
 import type React from 'react';
 
 import pointerInsertion from '../utils/pointer-insertion';
+import SortableDragPreview from './SortableDragPreview';
 
 type Props = {
   ids: string[];
@@ -45,6 +46,7 @@ export default function SortableList({ ids, onMove, children }: Props) {
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         {children}
       </SortableContext>
+      <SortableDragPreview />
     </DndContext>
   );
 }
