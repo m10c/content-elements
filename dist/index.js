@@ -108,7 +108,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import {
-  Box as Box2,
+  Box as Box3,
   Button as Button2,
   Card as Card2,
   CardContent,
@@ -123,7 +123,7 @@ import {
   Typography as Typography3
 } from "@mui/material";
 import { FieldRadioGroup, FieldSwitch, FieldText } from "@m10c/mui-kit";
-import React2 from "react";
+import React3 from "react";
 
 // src/hooks/use-list-keys.ts
 import React from "react";
@@ -177,7 +177,7 @@ function useSortableItem(id, disabled = false) {
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : void 0,
         transition,
         position: "relative",
-        zIndex: isDragging ? 1 : void 0
+        opacity: isDragging ? 0 : void 0
       }
     },
     // Only the handle starts a drag, so text inside the item stays selectable.
@@ -285,7 +285,6 @@ import {
   DndContext,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors
 } from "@dnd-kit/core";
@@ -294,7 +293,78 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy
 } from "@dnd-kit/sortable";
+
+// src/utils/pointer-insertion.ts
+import { closestCenter } from "@dnd-kit/core";
+var pointerInsertion = (args) => {
+  const { active, droppableContainers, droppableRects, pointerCoordinates } = args;
+  if (!pointerCoordinates) return closestCenter(args);
+  const items = droppableContainers.flatMap((container) => {
+    const rect = droppableRects.get(container.id);
+    return rect ? [{ container, rect }] : [];
+  }).sort((a, b) => a.rect.top - b.rect.top);
+  const from = items.findIndex(({ container }) => container.id === active.id);
+  const next = items[from + 1];
+  const activeItem = items[from];
+  const removedGap = activeItem && next ? next.rect.top - activeItem.rect.top : 0;
+  const to = items.filter(({ rect }, index) => {
+    if (index === from) return false;
+    const top = index > from ? rect.top - removedGap : rect.top;
+    return pointerCoordinates.y > top + rect.height / 2;
+  }).length;
+  const target = items[to];
+  return target ? [
+    {
+      id: target.container.id,
+      data: { droppableContainer: target.container }
+    }
+  ] : [];
+};
+var pointer_insertion_default = pointerInsertion;
+
+// src/components/SortableDragPreview.tsx
+import { DragOverlay, useDndContext } from "@dnd-kit/core";
+import { Box as Box2 } from "@mui/material";
+import React2 from "react";
 import { jsx as jsx4 } from "react/jsx-runtime";
+function SortableDragPreview() {
+  const { activeNode } = useDndContext();
+  return /* @__PURE__ */ jsx4(DragOverlay, { style: { margin: 0 }, children: activeNode && /* @__PURE__ */ jsx4(ElementPreview, { element: activeNode }) });
+}
+function ElementPreview({ element }) {
+  const containerRef = React2.useRef(null);
+  React2.useLayoutEffect(() => {
+    const clone = element.cloneNode(true);
+    if (!(clone instanceof HTMLElement)) return;
+    clone.style.opacity = "";
+    clone.style.transform = "";
+    copyFieldValues(element, clone);
+    containerRef.current?.replaceChildren(clone);
+  }, [element]);
+  return /* @__PURE__ */ jsx4(
+    Box2,
+    {
+      ref: containerRef,
+      sx: { width: element.offsetWidth, cursor: "grabbing" }
+    }
+  );
+}
+function copyFieldValues(source, clone) {
+  const selector = "input, textarea, select";
+  const sourceFields = source.querySelectorAll(selector);
+  clone.querySelectorAll(selector).forEach((field, index) => {
+    const sourceField = sourceFields[index];
+    if (hasValue(field) && hasValue(sourceField)) {
+      field.value = sourceField.value;
+    }
+  });
+}
+function hasValue(element) {
+  return element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement;
+}
+
+// src/components/SortableList.tsx
+import { jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
 function SortableList({ ids, onMove, children }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -302,11 +372,11 @@ function SortableList({ ids, onMove, children }) {
       coordinateGetter: sortableKeyboardCoordinates
     })
   );
-  return /* @__PURE__ */ jsx4(
+  return /* @__PURE__ */ jsxs4(
     DndContext,
     {
       sensors,
-      collisionDetection: closestCenter,
+      collisionDetection: pointer_insertion_default,
       onDragEnd: ({ active, over }) => {
         if (!over || active.id === over.id) return;
         const from = ids.indexOf(String(active.id));
@@ -314,13 +384,16 @@ function SortableList({ ids, onMove, children }) {
         if (from === -1 || to === -1) return;
         onMove(from, to);
       },
-      children: /* @__PURE__ */ jsx4(SortableContext, { items: ids, strategy: verticalListSortingStrategy, children })
+      children: [
+        /* @__PURE__ */ jsx5(SortableContext, { items: ids, strategy: verticalListSortingStrategy, children }),
+        /* @__PURE__ */ jsx5(SortableDragPreview, {})
+      ]
     }
   );
 }
 
 // src/components/BlocksField.tsx
-import { Fragment, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
 function BlocksField({
   blockTypes,
   field,
@@ -335,16 +408,16 @@ function BlocksField({
   emptyState
 }, ref) {
   const blocks = field.value ?? [];
-  const [pendingDeleteIndex, setPendingDeleteIndex] = React2.useState(null);
-  const [pendingScrollIndex, setPendingScrollIndex] = React2.useState(null);
-  const blockElementsRef = React2.useRef(/* @__PURE__ */ new Map());
-  React2.useImperativeHandle(
+  const [pendingDeleteIndex, setPendingDeleteIndex] = React3.useState(null);
+  const [pendingScrollIndex, setPendingScrollIndex] = React3.useState(null);
+  const blockElementsRef = React3.useRef(/* @__PURE__ */ new Map());
+  React3.useImperativeHandle(
     ref,
     () => ({ scrollToBlock: (index) => setPendingScrollIndex(index) }),
     []
   );
   const { keys, moveKey, removeKey } = useListKeys(blocks.length);
-  const blockTypesByKey = React2.useMemo(
+  const blockTypesByKey = React3.useMemo(
     () => Object.fromEntries(
       blockTypes.map((blockType) => [blockType.key, blockType])
     ),
@@ -363,23 +436,23 @@ function BlocksField({
     moveKey(from, to);
     field.handleValueChange(moveItem(blocks, from, to));
   }
-  React2.useEffect(() => {
+  React3.useEffect(() => {
     if (pendingScrollIndex === null) return;
     setPendingScrollIndex(null);
     const key = keys[pendingScrollIndex];
     if (key === void 0) return;
     blockElementsRef.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [keys, pendingScrollIndex]);
-  return /* @__PURE__ */ jsxs4(Fragment, { children: [
-    /* @__PURE__ */ jsxs4(Stack4, { spacing: canEditBlockList ? 3 : 2, children: [
+  return /* @__PURE__ */ jsxs5(Fragment, { children: [
+    /* @__PURE__ */ jsxs5(Stack4, { spacing: canEditBlockList ? 3 : 2, children: [
       header,
       blocks.length === 0 && emptyState,
-      /* @__PURE__ */ jsx5(SortableList, { ids: keys, onMove: moveBlock, children: blocks.map((block, index) => {
+      /* @__PURE__ */ jsx6(SortableList, { ids: keys, onMove: moveBlock, children: blocks.map((block, index) => {
         const key = keys[index];
         if (key === void 0) {
           throw new Error(`Block ${index} has no key`);
         }
-        return /* @__PURE__ */ jsx5(
+        return /* @__PURE__ */ jsx6(
           BlockCard,
           {
             sortableId: key,
@@ -404,7 +477,7 @@ function BlocksField({
       }) }),
       footer
     ] }),
-    /* @__PURE__ */ jsx5(
+    /* @__PURE__ */ jsx6(
       ConfirmDialog,
       {
         open: pendingDeleteIndex !== null,
@@ -420,7 +493,7 @@ function BlocksField({
     )
   ] });
 }
-var BlocksField_default = React2.forwardRef(BlocksField);
+var BlocksField_default = React3.forwardRef(BlocksField);
 function BlockCard({
   sortableId,
   elementRef,
@@ -437,7 +510,7 @@ function BlockCard({
   onDelete
 }) {
   const { itemProps, handleProps } = useSortableItem(sortableId, !canReorder);
-  const [headerActionContainer, setHeaderActionContainer] = React2.useState(null);
+  const [headerActionContainer, setHeaderActionContainer] = React3.useState(null);
   function updateData(key, value) {
     onChange({ ...block, data: { ...block.data, [key]: value } });
   }
@@ -452,8 +525,8 @@ function BlockCard({
       return void 0;
     }
     const claimed = fieldDef.headerFieldKeys;
-    return /* @__PURE__ */ jsx5(Fragment, { children: Object.entries(fields).filter(([key]) => claimed.includes(key)).map(
-      ([key, headerFieldDef]) => headerFieldDef.kind === "list" ? null : /* @__PURE__ */ jsx5(
+    return /* @__PURE__ */ jsx6(Fragment, { children: Object.entries(fields).filter(([key]) => claimed.includes(key)).map(
+      ([key, headerFieldDef]) => headerFieldDef.kind === "list" ? null : /* @__PURE__ */ jsx6(
         SimpleFieldRenderer,
         {
           fieldKey: key,
@@ -469,7 +542,7 @@ function BlockCard({
   }
   const showLabel = !blockType?.hideLabel;
   const label = blockType?.label ?? `Unknown block: ${block.type}`;
-  const body = BlockComponent ? /* @__PURE__ */ jsx5(
+  const body = BlockComponent ? /* @__PURE__ */ jsx6(
     BlockComponent,
     {
       block,
@@ -478,7 +551,7 @@ function BlockCard({
       errorPath,
       headerActionContainer
     }
-  ) : blockType ? Object.entries(blockType.fields).filter(([key]) => !headerFieldKeys.has(key)).map(([key, fieldDef]) => /* @__PURE__ */ jsx5(
+  ) : blockType ? Object.entries(blockType.fields).filter(([key]) => !headerFieldKeys.has(key)).map(([key, fieldDef]) => /* @__PURE__ */ jsx6(
     BlockFieldRenderer,
     {
       fieldKey: key,
@@ -493,42 +566,42 @@ function BlockCard({
       onChange: (value) => updateData(key, value)
     },
     key
-  )) : /* @__PURE__ */ jsxs4(Typography3, { variant: "body2", color: "text.secondary", children: [
+  )) : /* @__PURE__ */ jsxs5(Typography3, { variant: "body2", color: "text.secondary", children: [
     'No schema registered for block type "',
     block.type,
     '".'
   ] });
-  const card = canReorder || onDelete ? /* @__PURE__ */ jsx5(
+  const card = canReorder || onDelete ? /* @__PURE__ */ jsx6(
     BlockCardFrame,
     {
-      gutter: canReorder && /* @__PURE__ */ jsx5(
-        Box2,
+      gutter: canReorder && /* @__PURE__ */ jsx6(
+        Box3,
         {
           ...handleProps,
           sx: { display: "flex", color: "primary.main" },
-          children: icons?.drag ?? /* @__PURE__ */ jsx5(DragIndicatorIcon, {})
+          children: icons?.drag ?? /* @__PURE__ */ jsx6(DragIndicatorIcon, {})
         }
       ),
       title: showLabel ? label : void 0,
-      action: /* @__PURE__ */ jsxs4(Stack4, { direction: "row", alignItems: "center", spacing: 1, children: [
-        /* @__PURE__ */ jsx5(Box2, { ref: setHeaderActionContainer, sx: { display: "flex" } }),
-        onDelete && /* @__PURE__ */ jsx5(
+      action: /* @__PURE__ */ jsxs5(Stack4, { direction: "row", alignItems: "center", spacing: 1, children: [
+        /* @__PURE__ */ jsx6(Box3, { ref: setHeaderActionContainer, sx: { display: "flex" } }),
+        onDelete && /* @__PURE__ */ jsx6(
           IconButton2,
           {
             size: "small",
             onClick: onDelete,
             "aria-label": "Delete block",
-            children: icons?.delete ?? /* @__PURE__ */ jsx5(DeleteOutlineIcon, {})
+            children: icons?.delete ?? /* @__PURE__ */ jsx6(DeleteOutlineIcon, {})
           }
         )
       ] }),
       children: body
     }
-  ) : /* @__PURE__ */ jsx5(Card2, { children: /* @__PURE__ */ jsx5(CardContent, { sx: { p: 2.5, "&:last-child": { pb: 2.5 } }, children: /* @__PURE__ */ jsxs4(Stack4, { spacing: 2, children: [
-    showLabel && /* @__PURE__ */ jsx5(Typography3, { variant: "subtitle1", children: label }),
+  ) : /* @__PURE__ */ jsx6(Card2, { children: /* @__PURE__ */ jsx6(CardContent, { sx: { p: 2.5, "&:last-child": { pb: 2.5 } }, children: /* @__PURE__ */ jsxs5(Stack4, { spacing: 2, children: [
+    showLabel && /* @__PURE__ */ jsx6(Typography3, { variant: "subtitle1", children: label }),
     body
   ] }) }) });
-  return /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsx6(
     "div",
     {
       ref: (element) => {
@@ -553,7 +626,7 @@ function BlockFieldRenderer({
   onChange
 }) {
   if (fieldDef.kind === "list") {
-    return /* @__PURE__ */ jsx5(
+    return /* @__PURE__ */ jsx6(
       ListFieldRenderer,
       {
         fieldDef,
@@ -568,7 +641,7 @@ function BlockFieldRenderer({
       }
     );
   }
-  return /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsx6(
     SimpleFieldRenderer,
     {
       fieldKey,
@@ -591,13 +664,13 @@ function SimpleFieldRenderer({
 }) {
   const label = labelOverride ?? fieldLabel(fieldDef, fieldKey);
   if (fieldDef.kind === "note") {
-    return /* @__PURE__ */ jsx5(FieldNote, { fieldDef, label });
+    return /* @__PURE__ */ jsx6(FieldNote, { fieldDef, label });
   }
   const stringValue = typeof value === "string" ? value : null;
   const isOn = value === true;
   const customRenderer = renderers?.[fieldDef.kind];
   if (customRenderer) {
-    return /* @__PURE__ */ jsx5(Fragment, { children: customRenderer({
+    return /* @__PURE__ */ jsx6(Fragment, { children: customRenderer({
       name: fieldKey,
       label,
       value: stringValue,
@@ -614,7 +687,7 @@ function SimpleFieldRenderer({
     }) });
   }
   if (fieldDef.kind === "boolean") {
-    return /* @__PURE__ */ jsx5(FieldWrap, { fieldDef, error, children: /* @__PURE__ */ jsx5(
+    return /* @__PURE__ */ jsx6(FieldWrap, { fieldDef, error, children: /* @__PURE__ */ jsx6(
       FieldSwitch,
       {
         field: {
@@ -627,7 +700,7 @@ function SimpleFieldRenderer({
     ) });
   }
   if (fieldDef.kind === "select") {
-    return /* @__PURE__ */ jsx5(FieldWrap, { fieldDef, label, error, children: /* @__PURE__ */ jsx5(
+    return /* @__PURE__ */ jsx6(FieldWrap, { fieldDef, label, error, children: /* @__PURE__ */ jsx6(
       FieldRadioGroup,
       {
         field: {
@@ -644,7 +717,7 @@ function SimpleFieldRenderer({
     ) });
   }
   if (fieldDef.kind === "images") {
-    return /* @__PURE__ */ jsx5(FieldWrap, { fieldDef, label, error });
+    return /* @__PURE__ */ jsx6(FieldWrap, { fieldDef, label, error });
   }
   const fieldProp = {
     name: fieldKey,
@@ -654,7 +727,7 @@ function SimpleFieldRenderer({
     errorList: error === void 0 ? void 0 : [error]
   };
   const multiline = fieldDef.kind === "textarea" || fieldDef.kind === "markdown" || fieldDef.kind === "richtext";
-  return /* @__PURE__ */ jsx5(FieldWrap, { fieldDef, label, children: /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsx6(FieldWrap, { fieldDef, label, children: /* @__PURE__ */ jsx6(
     FieldText,
     {
       field: fieldProp,
@@ -662,32 +735,32 @@ function SimpleFieldRenderer({
       multiline,
       minRows: multiline ? 2 : void 0,
       InputProps: fieldDef.prefix ? {
-        startAdornment: /* @__PURE__ */ jsx5(InputAdornment, { position: "start", children: fieldDef.prefix })
+        startAdornment: /* @__PURE__ */ jsx6(InputAdornment, { position: "start", children: fieldDef.prefix })
       } : void 0,
       inputProps: fieldDef.maxLength ? { maxLength: fieldDef.maxLength } : void 0
     }
   ) });
 }
 function FieldWrap({ fieldDef, label, error, children }) {
-  return /* @__PURE__ */ jsxs4(Stack4, { spacing: 1, children: [
-    /* @__PURE__ */ jsxs4(Stack4, { spacing: 0.5, children: [
-      label && /* @__PURE__ */ jsx5(Typography3, { variant: "subtitle2", children: label }),
-      fieldHint(fieldDef) && /* @__PURE__ */ jsx5(Typography3, { variant: "body2", color: "text.secondary", children: fieldHint(fieldDef) })
+  return /* @__PURE__ */ jsxs5(Stack4, { spacing: 1, children: [
+    /* @__PURE__ */ jsxs5(Stack4, { spacing: 0.5, children: [
+      label && /* @__PURE__ */ jsx6(Typography3, { variant: "subtitle2", children: label }),
+      fieldHint(fieldDef) && /* @__PURE__ */ jsx6(Typography3, { variant: "body2", color: "text.secondary", children: fieldHint(fieldDef) })
     ] }),
     children,
-    error && /* @__PURE__ */ jsx5(FieldError, { error })
+    error && /* @__PURE__ */ jsx6(FieldError, { error })
   ] });
 }
 function FieldError({ error }) {
-  return /* @__PURE__ */ jsx5(Typography3, { variant: "caption", color: "error.main", children: error });
+  return /* @__PURE__ */ jsx6(Typography3, { variant: "caption", color: "error.main", children: error });
 }
 function FieldNote({
   fieldDef,
   label
 }) {
-  return /* @__PURE__ */ jsxs4(Stack4, { spacing: 0.5, children: [
-    fieldDef.label && /* @__PURE__ */ jsx5(Typography3, { variant: "subtitle1", children: label }),
-    /* @__PURE__ */ jsx5(Typography3, { variant: "body2", color: "text.secondary", children: fieldDef.text })
+  return /* @__PURE__ */ jsxs5(Stack4, { spacing: 0.5, children: [
+    fieldDef.label && /* @__PURE__ */ jsx6(Typography3, { variant: "subtitle1", children: label }),
+    /* @__PURE__ */ jsx6(Typography3, { variant: "body2", color: "text.secondary", children: fieldDef.text })
   ] });
 }
 function stringValues(value) {
@@ -717,7 +790,7 @@ function emptyItem(fieldDef) {
   );
 }
 function ListFieldRenderer(props) {
-  return props.fieldDef.variant === "inline" ? /* @__PURE__ */ jsx5(ListInline, { ...props }) : /* @__PURE__ */ jsx5(ListCards, { ...props });
+  return props.fieldDef.variant === "inline" ? /* @__PURE__ */ jsx6(ListInline, { ...props }) : /* @__PURE__ */ jsx6(ListCards, { ...props });
 }
 function ListInline({
   fieldDef,
@@ -733,9 +806,9 @@ function ListInline({
     updated[index] = next;
     onChange(updated);
   }
-  return /* @__PURE__ */ jsx5(Stack4, { spacing: 2, children: items.map((item, index) => /* @__PURE__ */ jsxs4(React2.Fragment, { children: [
-    index > 0 && /* @__PURE__ */ jsx5(Divider2, {}),
-    Object.entries(fieldDef.itemFields).map(([subKey, subFieldDef]) => /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsx6(Stack4, { spacing: 2, children: items.map((item, index) => /* @__PURE__ */ jsxs5(React3.Fragment, { children: [
+    index > 0 && /* @__PURE__ */ jsx6(Divider2, {}),
+    Object.entries(fieldDef.itemFields).map(([subKey, subFieldDef]) => /* @__PURE__ */ jsx6(
       SimpleFieldRenderer,
       {
         fieldKey: subKey,
@@ -761,8 +834,8 @@ function ListCards({
   headerSlot,
   onChange
 }) {
-  const [editedIndex, setEditedIndex] = React2.useState(null);
-  const [isAdding, setIsAdding] = React2.useState(false);
+  const [editedIndex, setEditedIndex] = React3.useState(null);
+  const [isAdding, setIsAdding] = React3.useState(false);
   const itemLabel = fieldDef.itemLabel ?? "item";
   const editedItem = editedIndex === null ? void 0 : items[editedIndex];
   const { maxItems, minItems } = fieldDef;
@@ -789,20 +862,20 @@ function ListCards({
     moveKey(from, to);
     onChange(moveItem(items, from, to));
   }
-  return /* @__PURE__ */ jsxs4(Stack4, { spacing: 1.5, children: [
-    !isFixedLength && /* @__PURE__ */ jsxs4(
+  return /* @__PURE__ */ jsxs5(Stack4, { spacing: 1.5, children: [
+    !isFixedLength && /* @__PURE__ */ jsxs5(
       Stack4,
       {
         direction: "row",
         alignItems: "center",
         justifyContent: "space-between",
         children: [
-          /* @__PURE__ */ jsx5(Typography3, { variant: "subtitle1", children: fieldLabel(fieldDef, itemLabel) }),
-          /* @__PURE__ */ jsx5(
+          /* @__PURE__ */ jsx6(Typography3, { variant: "subtitle1", children: fieldLabel(fieldDef, itemLabel) }),
+          /* @__PURE__ */ jsx6(
             Button2,
             {
               size: "small",
-              startIcon: /* @__PURE__ */ jsx5(AddIcon, {}),
+              startIcon: /* @__PURE__ */ jsx6(AddIcon, {}),
               disabled: isFull,
               onClick: () => setIsAdding(true),
               children: "Add"
@@ -811,7 +884,7 @@ function ListCards({
         ]
       }
     ),
-    maxItems !== void 0 && !isFixedLength && /* @__PURE__ */ jsxs4(Typography3, { variant: "body2", color: "text.secondary", children: [
+    maxItems !== void 0 && !isFixedLength && /* @__PURE__ */ jsxs5(Typography3, { variant: "body2", color: "text.secondary", children: [
       items.length,
       " of ",
       maxItems,
@@ -825,12 +898,12 @@ function ListCards({
       "s."
     ] }),
     headerSlot,
-    /* @__PURE__ */ jsx5(SortableList, { ids: keys, onMove: moveListItem, children: items.map((item, index) => {
+    /* @__PURE__ */ jsx6(SortableList, { ids: keys, onMove: moveListItem, children: items.map((item, index) => {
       const key = keys[index];
       if (key === void 0) {
         throw new Error(`List item ${index} has no key`);
       }
-      return /* @__PURE__ */ jsx5(
+      return /* @__PURE__ */ jsx6(
         ListItemCard,
         {
           sortableId: key,
@@ -844,7 +917,7 @@ function ListCards({
         key
       );
     }) }),
-    editedIndex !== null && editedItem !== void 0 && /* @__PURE__ */ jsx5(
+    editedIndex !== null && editedItem !== void 0 && /* @__PURE__ */ jsx6(
       ListItemDialog,
       {
         title: `Edit ${fieldDef.label ?? itemLabel}`,
@@ -864,7 +937,7 @@ function ListCards({
         onClose: () => setEditedIndex(null)
       }
     ),
-    isAdding && /* @__PURE__ */ jsx5(
+    isAdding && /* @__PURE__ */ jsx6(
       ListItemDialog,
       {
         title: `Add ${fieldDef.label ?? itemLabel}`,
@@ -891,7 +964,7 @@ function ListItemCard({
   onEdit
 }) {
   const { itemProps, handleProps } = useSortableItem(sortableId);
-  return /* @__PURE__ */ jsxs4(
+  return /* @__PURE__ */ jsxs5(
     Stack4,
     {
       ...itemProps,
@@ -900,28 +973,28 @@ function ListItemCard({
       alignItems: "flex-start",
       sx: { p: 2, borderRadius: 1, bgcolor: "grey.100" },
       children: [
-        /* @__PURE__ */ jsx5(Box2, { ...handleProps, sx: { display: "flex", color: "primary.main" }, children: icons?.drag ?? /* @__PURE__ */ jsx5(DragIndicatorIcon, { fontSize: "small" }) }),
-        /* @__PURE__ */ jsx5(Stack4, { spacing: 1.5, sx: { flex: 1, minWidth: 0 }, children: Object.entries(fieldDef.itemFields).map(([subKey, subFieldDef]) => {
+        /* @__PURE__ */ jsx6(Box3, { ...handleProps, sx: { display: "flex", color: "primary.main" }, children: icons?.drag ?? /* @__PURE__ */ jsx6(DragIndicatorIcon, { fontSize: "small" }) }),
+        /* @__PURE__ */ jsx6(Stack4, { spacing: 1.5, sx: { flex: 1, minWidth: 0 }, children: Object.entries(fieldDef.itemFields).map(([subKey, subFieldDef]) => {
           const label = fieldLabel(subFieldDef, subKey);
           if (subFieldDef.kind === "note") {
-            return /* @__PURE__ */ jsx5(FieldNote, { fieldDef: subFieldDef, label }, subKey);
+            return /* @__PURE__ */ jsx6(FieldNote, { fieldDef: subFieldDef, label }, subKey);
           }
           const value = typeof item[subKey] === "string" ? item[subKey] : null;
           const preview = previews?.[subFieldDef.kind];
-          return /* @__PURE__ */ jsxs4(Stack4, { spacing: 0.5, children: [
-            /* @__PURE__ */ jsx5(Typography3, { variant: "body2", color: "text.secondary", children: label }),
-            preview ? preview(value) : /* @__PURE__ */ jsx5(Typography3, { variant: "body1", children: fieldSummary(subFieldDef, item[subKey]) }),
-            errors?.[subKey] && /* @__PURE__ */ jsx5(FieldError, { error: errors[subKey] })
+          return /* @__PURE__ */ jsxs5(Stack4, { spacing: 0.5, children: [
+            /* @__PURE__ */ jsx6(Typography3, { variant: "body2", color: "text.secondary", children: label }),
+            preview ? preview(value) : /* @__PURE__ */ jsx6(Typography3, { variant: "body1", children: fieldSummary(subFieldDef, item[subKey]) }),
+            errors?.[subKey] && /* @__PURE__ */ jsx6(FieldError, { error: errors[subKey] })
           ] }, subKey);
         }) }),
-        /* @__PURE__ */ jsx5(
+        /* @__PURE__ */ jsx6(
           IconButton2,
           {
             size: "small",
             onClick: onEdit,
             "aria-label": "Edit item",
             sx: { color: "primary.main" },
-            children: icons?.edit ?? /* @__PURE__ */ jsx5(EditOutlinedIcon, { fontSize: "small" })
+            children: icons?.edit ?? /* @__PURE__ */ jsx6(EditOutlinedIcon, { fontSize: "small" })
           }
         )
       ]
@@ -939,45 +1012,45 @@ function ListItemDialog({
   onConfirm,
   onClose
 }) {
-  const [draft, setDraft] = React2.useState(item);
-  return /* @__PURE__ */ jsxs4(Dialog3, { open: true, fullWidth: true, maxWidth: "xs", onClose, children: [
-    /* @__PURE__ */ jsxs4(DialogTitle3, { sx: { pr: 6 }, children: [
+  const [draft, setDraft] = React3.useState(item);
+  return /* @__PURE__ */ jsxs5(Dialog3, { open: true, fullWidth: true, maxWidth: "xs", onClose, children: [
+    /* @__PURE__ */ jsxs5(DialogTitle3, { sx: { pr: 6 }, children: [
       title,
-      /* @__PURE__ */ jsx5(
+      /* @__PURE__ */ jsx6(
         IconButton2,
         {
           size: "small",
           onClick: onClose,
           "aria-label": "Close",
           sx: { position: "absolute", right: 12, top: 12 },
-          children: /* @__PURE__ */ jsx5(CloseIcon2, { fontSize: "small" })
+          children: /* @__PURE__ */ jsx6(CloseIcon2, { fontSize: "small" })
         }
       )
     ] }),
-    /* @__PURE__ */ jsx5(DialogContent3, { dividers: true, children: /* @__PURE__ */ jsxs4(Stack4, { spacing: 2, sx: { pt: 1 }, children: [
-      !!fieldDef.variables?.length && /* @__PURE__ */ jsxs4(
+    /* @__PURE__ */ jsx6(DialogContent3, { dividers: true, children: /* @__PURE__ */ jsxs5(Stack4, { spacing: 2, sx: { pt: 1 }, children: [
+      !!fieldDef.variables?.length && /* @__PURE__ */ jsxs5(
         Stack4,
         {
           spacing: 1,
           sx: { p: 2, borderRadius: 1, bgcolor: "grey.100" },
           children: [
-            /* @__PURE__ */ jsx5(Typography3, { variant: "subtitle2", children: "Variables to use" }),
-            /* @__PURE__ */ jsx5(
+            /* @__PURE__ */ jsx6(Typography3, { variant: "subtitle2", children: "Variables to use" }),
+            /* @__PURE__ */ jsx6(
               Stack4,
               {
                 direction: "row",
                 spacing: 2,
-                divider: /* @__PURE__ */ jsx5(Divider2, { flexItem: true, orientation: "vertical" }),
-                children: fieldDef.variables.map((variable) => /* @__PURE__ */ jsxs4(Stack4, { spacing: 0.5, sx: { flex: 1 }, children: [
-                  /* @__PURE__ */ jsx5(Typography3, { variant: "body2", children: variable.token }),
-                  /* @__PURE__ */ jsx5(Typography3, { variant: "caption", color: "text.secondary", children: variable.description })
+                divider: /* @__PURE__ */ jsx6(Divider2, { flexItem: true, orientation: "vertical" }),
+                children: fieldDef.variables.map((variable) => /* @__PURE__ */ jsxs5(Stack4, { spacing: 0.5, sx: { flex: 1 }, children: [
+                  /* @__PURE__ */ jsx6(Typography3, { variant: "body2", children: variable.token }),
+                  /* @__PURE__ */ jsx6(Typography3, { variant: "caption", color: "text.secondary", children: variable.description })
                 ] }, variable.token))
               }
             )
           ]
         }
       ),
-      Object.entries(fieldDef.itemFields).map(([subKey, subFieldDef]) => /* @__PURE__ */ jsx5(
+      Object.entries(fieldDef.itemFields).map(([subKey, subFieldDef]) => /* @__PURE__ */ jsx6(
         SimpleFieldRenderer,
         {
           fieldKey: subKey,
@@ -990,10 +1063,10 @@ function ListItemDialog({
         subKey
       ))
     ] }) }),
-    /* @__PURE__ */ jsx5(DialogActions2, { sx: { p: 2 }, children: onDelete ? /* @__PURE__ */ jsxs4(Fragment, { children: [
-      /* @__PURE__ */ jsx5(Button2, { variant: "outlined", color: "error", onClick: onDelete, children: "Delete" }),
-      /* @__PURE__ */ jsx5(Button2, { variant: "contained", onClick: () => onConfirm(draft), children: confirmLabel })
-    ] }) : /* @__PURE__ */ jsx5(
+    /* @__PURE__ */ jsx6(DialogActions2, { sx: { p: 2 }, children: onDelete ? /* @__PURE__ */ jsxs5(Fragment, { children: [
+      /* @__PURE__ */ jsx6(Button2, { variant: "outlined", color: "error", onClick: onDelete, children: "Delete" }),
+      /* @__PURE__ */ jsx6(Button2, { variant: "contained", onClick: () => onConfirm(draft), children: confirmLabel })
+    ] }) : /* @__PURE__ */ jsx6(
       Button2,
       {
         fullWidth: true,
@@ -1007,7 +1080,7 @@ function ListItemDialog({
 
 // src/components/DimensionSelect.tsx
 import { Chip, MenuItem, Stack as Stack5, TextField, Typography as Typography4 } from "@mui/material";
-import { jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx7, jsxs as jsxs6 } from "react/jsx-runtime";
 function DimensionSelect({
   value,
   options,
@@ -1020,11 +1093,11 @@ function DimensionSelect({
   const renderOption = (optionValue) => {
     const option = options.find((candidate) => candidate.value === optionValue);
     if (!option) {
-      return /* @__PURE__ */ jsx6(Typography4, { variant: "body2", color: "text.secondary", children: placeholder });
+      return /* @__PURE__ */ jsx7(Typography4, { variant: "body2", color: "text.secondary", children: placeholder });
     }
-    return /* @__PURE__ */ jsxs5(Stack5, { direction: "row", spacing: 1, alignItems: "center", children: [
-      /* @__PURE__ */ jsx6("span", { children: option.label }),
-      getChips?.(option.value).map((chip) => /* @__PURE__ */ jsx6(
+    return /* @__PURE__ */ jsxs6(Stack5, { direction: "row", spacing: 1, alignItems: "center", children: [
+      /* @__PURE__ */ jsx7("span", { children: option.label }),
+      getChips?.(option.value).map((chip) => /* @__PURE__ */ jsx7(
         Chip,
         {
           size: "small",
@@ -1035,7 +1108,7 @@ function DimensionSelect({
       ))
     ] });
   };
-  return /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsx7(
     TextField,
     {
       select: true,
@@ -1048,24 +1121,24 @@ function DimensionSelect({
         displayEmpty: Boolean(placeholder),
         renderValue: (selected) => renderOption(String(selected))
       },
-      children: options.map((option) => /* @__PURE__ */ jsx6(MenuItem, { value: option.value, children: renderOption(option.value) }, option.value))
+      children: options.map((option) => /* @__PURE__ */ jsx7(MenuItem, { value: option.value, children: renderOption(option.value) }, option.value))
     }
   );
 }
 
 // src/components/PreviewIframe.tsx
-import { Box as Box3 } from "@mui/material";
-import React3 from "react";
-import { jsx as jsx7 } from "react/jsx-runtime";
+import { Box as Box4 } from "@mui/material";
+import React4 from "react";
+import { jsx as jsx8 } from "react/jsx-runtime";
 function PreviewIframe({
   iframeRef,
   src,
   renderWidth,
   title = "Preview"
 }) {
-  const containerRef = React3.useRef(null);
-  const [containerWidth, setContainerWidth] = React3.useState(0);
-  React3.useEffect(() => {
+  const containerRef = React4.useRef(null);
+  const [containerWidth, setContainerWidth] = React4.useState(0);
+  React4.useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     const observer = new ResizeObserver((entries) => {
@@ -1078,8 +1151,8 @@ function PreviewIframe({
   }, []);
   if (!src) return null;
   const scale = containerWidth > 0 ? Math.min(1, containerWidth / renderWidth) : 0.5;
-  return /* @__PURE__ */ jsx7(Box3, { ref: containerRef, sx: { flex: 1, overflow: "hidden", p: 1.5, pt: 0 }, children: /* @__PURE__ */ jsx7(
-    Box3,
+  return /* @__PURE__ */ jsx8(Box4, { ref: containerRef, sx: { flex: 1, overflow: "hidden", p: 1.5, pt: 0 }, children: /* @__PURE__ */ jsx8(
+    Box4,
     {
       sx: {
         width: "100%",
@@ -1088,7 +1161,7 @@ function PreviewIframe({
         overflow: "hidden",
         mx: "auto"
       },
-      children: /* @__PURE__ */ jsx7(
+      children: /* @__PURE__ */ jsx8(
         "iframe",
         {
           ref: iframeRef,
@@ -1111,7 +1184,7 @@ function PreviewIframe({
 }
 
 // src/components/LivePreview.tsx
-import { jsx as jsx8 } from "react/jsx-runtime";
+import { jsx as jsx9 } from "react/jsx-runtime";
 function LivePreview({
   previewUrl,
   src,
@@ -1127,7 +1200,7 @@ function LivePreview({
     pagePath,
     globals
   });
-  return /* @__PURE__ */ jsx8(
+  return /* @__PURE__ */ jsx9(
     PreviewIframe,
     {
       iframeRef,
@@ -1139,13 +1212,13 @@ function LivePreview({
 }
 
 // src/components/PageEditor.tsx
-import { Box as Box5, Button as Button4, Stack as Stack7 } from "@mui/material";
-import React5 from "react";
+import { Box as Box6, Button as Button4, Stack as Stack7 } from "@mui/material";
+import React6 from "react";
 
 // src/components/PreviewDeviceSelect.tsx
 import { Devices, KeyboardArrowDown } from "@mui/icons-material";
 import { FormControl, MenuItem as MenuItem2, Select } from "@mui/material";
-import { jsx as jsx9 } from "react/jsx-runtime";
+import { jsx as jsx10 } from "react/jsx-runtime";
 var DEVICE_LABELS = {
   desktop: "Desktop",
   tablet: "Tablet",
@@ -1156,37 +1229,37 @@ function PreviewDeviceSelect({
   onChange,
   labels
 }) {
-  return /* @__PURE__ */ jsx9(FormControl, { size: "small", children: /* @__PURE__ */ jsx9(
+  return /* @__PURE__ */ jsx10(FormControl, { size: "small", children: /* @__PURE__ */ jsx10(
     Select,
     {
       value,
       onChange: (event) => onChange(event.target.value),
-      startAdornment: /* @__PURE__ */ jsx9(Devices, { sx: { fontSize: 18, color: "text.secondary", mr: 1 } }),
+      startAdornment: /* @__PURE__ */ jsx10(Devices, { sx: { fontSize: 18, color: "text.secondary", mr: 1 } }),
       IconComponent: KeyboardArrowDown,
       sx: { bgcolor: "background.paper" },
-      children: Object.keys(DEVICE_LABELS).map((device) => /* @__PURE__ */ jsx9(MenuItem2, { value: device, children: labels?.[device] ?? DEVICE_LABELS[device] }, device))
+      children: Object.keys(DEVICE_LABELS).map((device) => /* @__PURE__ */ jsx10(MenuItem2, { value: device, children: labels?.[device] ?? DEVICE_LABELS[device] }, device))
     }
   ) });
 }
 
 // src/components/PreviewLayout.tsx
-import { Box as Box4, Stack as Stack6 } from "@mui/material";
-import React4 from "react";
+import { Box as Box5, Stack as Stack6 } from "@mui/material";
+import React5 from "react";
 
 // src/components/PreviewToggleButton.tsx
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Button as Button3 } from "@mui/material";
-import { jsx as jsx10 } from "react/jsx-runtime";
+import { jsx as jsx11 } from "react/jsx-runtime";
 function PreviewToggleButton({
   isPreviewVisible,
   onClick
 }) {
-  return /* @__PURE__ */ jsx10(
+  return /* @__PURE__ */ jsx11(
     Button3,
     {
       variant: "outlined",
       size: "small",
-      startIcon: isPreviewVisible ? /* @__PURE__ */ jsx10(VisibilityOff, {}) : /* @__PURE__ */ jsx10(Visibility, {}),
+      startIcon: isPreviewVisible ? /* @__PURE__ */ jsx11(VisibilityOff, {}) : /* @__PURE__ */ jsx11(Visibility, {}),
       onClick,
       sx: { whiteSpace: "nowrap", bgcolor: "background.paper" },
       children: isPreviewVisible ? "Hide Preview" : "Show Preview"
@@ -1195,17 +1268,17 @@ function PreviewToggleButton({
 }
 
 // src/components/PreviewLayout.tsx
-import { jsx as jsx11, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
 function PreviewLayout({
   children,
   preview,
   previewToolbar,
   previewWidth
 }) {
-  const [isPreviewVisible, setIsPreviewVisible] = React4.useState(true);
-  return /* @__PURE__ */ jsxs6(Stack6, { direction: "row", sx: { flex: 1, height: "100%", minHeight: 0 }, children: [
-    /* @__PURE__ */ jsxs6(
-      Box4,
+  const [isPreviewVisible, setIsPreviewVisible] = React5.useState(true);
+  return /* @__PURE__ */ jsxs7(Stack6, { direction: "row", sx: { flex: 1, height: "100%", minHeight: 0 }, children: [
+    /* @__PURE__ */ jsxs7(
+      Box5,
       {
         sx: {
           flex: 1,
@@ -1214,7 +1287,7 @@ function PreviewLayout({
           bgcolor: "background.level1"
         },
         children: [
-          !isPreviewVisible && /* @__PURE__ */ jsx11(Box4, { sx: { px: 3, pt: 3 }, children: /* @__PURE__ */ jsx11(
+          !isPreviewVisible && /* @__PURE__ */ jsx12(Box5, { sx: { px: 3, pt: 3 }, children: /* @__PURE__ */ jsx12(
             PreviewToggleButton,
             {
               isPreviewVisible: false,
@@ -1225,7 +1298,7 @@ function PreviewLayout({
         ]
       }
     ),
-    isPreviewVisible && /* @__PURE__ */ jsxs6(
+    isPreviewVisible && /* @__PURE__ */ jsxs7(
       Stack6,
       {
         sx: {
@@ -1233,8 +1306,8 @@ function PreviewLayout({
           bgcolor: "grey.200"
         },
         children: [
-          /* @__PURE__ */ jsxs6(Stack6, { direction: "row", spacing: 1, sx: { p: 1.5, flexShrink: 0 }, children: [
-            /* @__PURE__ */ jsx11(
+          /* @__PURE__ */ jsxs7(Stack6, { direction: "row", spacing: 1, sx: { p: 1.5, flexShrink: 0 }, children: [
+            /* @__PURE__ */ jsx12(
               PreviewToggleButton,
               {
                 isPreviewVisible: true,
@@ -1251,7 +1324,7 @@ function PreviewLayout({
 }
 
 // src/components/PageEditor.tsx
-import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
 var GLOBAL_PREVIEW_PATH = "home";
 function PageEditor({
   blockTypes,
@@ -1270,19 +1343,19 @@ function PageEditor({
   publishDisabled,
   onPublish
 }) {
-  const [previewDevice, setPreviewDevice] = React5.useState("desktop");
+  const [previewDevice, setPreviewDevice] = React6.useState("desktop");
   const isGlobal = globalPagePaths.includes(pagePath);
   const routePath = isGlobal ? GLOBAL_PREVIEW_PATH : previewPath ?? pagePath;
   const previewSrc = `${previewUrl}/${routePath === "home" ? "" : routePath}?preview`;
-  return /* @__PURE__ */ jsxs7(
-    Box5,
+  return /* @__PURE__ */ jsxs8(
+    Box6,
     {
       sx: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       children: [
-        /* @__PURE__ */ jsx12(
+        /* @__PURE__ */ jsx13(
           PreviewLayout,
           {
-            previewToolbar: /* @__PURE__ */ jsx12(
+            previewToolbar: /* @__PURE__ */ jsx13(
               PreviewDeviceSelect,
               {
                 value: previewDevice,
@@ -1290,7 +1363,7 @@ function PageEditor({
                 labels: deviceLabels
               }
             ),
-            preview: /* @__PURE__ */ jsx12(
+            preview: /* @__PURE__ */ jsx13(
               LivePreview,
               {
                 previewUrl,
@@ -1302,7 +1375,7 @@ function PageEditor({
                 title: "Page preview"
               }
             ),
-            children: /* @__PURE__ */ jsx12(Box5, { sx: { p: 3, pb: 10 }, children: /* @__PURE__ */ jsx12(
+            children: /* @__PURE__ */ jsx13(Box6, { sx: { p: 3, pb: 10 }, children: /* @__PURE__ */ jsx13(
               BlocksField_default,
               {
                 blockTypes,
@@ -1315,7 +1388,7 @@ function PageEditor({
             ) })
           }
         ),
-        /* @__PURE__ */ jsx12(
+        /* @__PURE__ */ jsx13(
           Stack7,
           {
             direction: "row",
@@ -1329,7 +1402,7 @@ function PageEditor({
               borderColor: "divider",
               bgcolor: "background.paper"
             },
-            children: /* @__PURE__ */ jsx12(
+            children: /* @__PURE__ */ jsx13(
               Button4,
               {
                 variant: "contained",
@@ -1348,7 +1421,7 @@ function PageEditor({
 // src/components/PublishState.tsx
 import { Chip as Chip2 } from "@mui/material";
 import { format, isBefore, parseISO } from "date-fns";
-import { jsx as jsx13 } from "react/jsx-runtime";
+import { jsx as jsx14 } from "react/jsx-runtime";
 function PublishState({
   item
 }) {
@@ -1356,7 +1429,7 @@ function PublishState({
   if (item.publishAt) {
     const publishDate = parseISO(item.publishAt);
     if (isBefore(/* @__PURE__ */ new Date(), publishDate)) {
-      return /* @__PURE__ */ jsx13(
+      return /* @__PURE__ */ jsx14(
         Chip2,
         {
           label: format(parseISO(item.publishAt), dateFormat),
@@ -1364,7 +1437,7 @@ function PublishState({
         }
       );
     }
-    return /* @__PURE__ */ jsx13(
+    return /* @__PURE__ */ jsx14(
       Chip2,
       {
         label: format(parseISO(item.publishAt), dateFormat),
@@ -1372,13 +1445,13 @@ function PublishState({
       }
     );
   }
-  return /* @__PURE__ */ jsx13(Chip2, { label: "Draft", color: "warning" });
+  return /* @__PURE__ */ jsx14(Chip2, { label: "Draft", color: "warning" });
 }
 
 // src/components/SeoEditor.tsx
-import { Box as Box6, Button as Button5, Chip as Chip3, Stack as Stack8, Typography as Typography5 } from "@mui/material";
+import { Box as Box7, Button as Button5, Chip as Chip3, Stack as Stack8, Typography as Typography5 } from "@mui/material";
 import { FieldText as FieldText2 } from "@m10c/mui-kit";
-import { Fragment as Fragment2, jsx as jsx14, jsxs as jsxs8 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
 var FAVICON_CHIP_SIZE = 26;
 var FAVICON_SIZE = 20;
 function CharacterCount({
@@ -1389,8 +1462,8 @@ function CharacterCount({
   const count = value?.length ?? 0;
   const isGood = count >= min && count <= max;
   const isTooLong = count > max;
-  return /* @__PURE__ */ jsxs8(Stack8, { direction: "row", spacing: 1, alignItems: "center", children: [
-    /* @__PURE__ */ jsx14(
+  return /* @__PURE__ */ jsxs9(Stack8, { direction: "row", spacing: 1, alignItems: "center", children: [
+    /* @__PURE__ */ jsx15(
       Chip3,
       {
         size: "small",
@@ -1398,7 +1471,7 @@ function CharacterCount({
         color: isTooLong ? "error" : isGood ? "success" : "warning"
       }
     ),
-    /* @__PURE__ */ jsxs8(Typography5, { variant: "caption", color: "text.secondary", children: [
+    /* @__PURE__ */ jsxs9(Typography5, { variant: "caption", color: "text.secondary", children: [
       "Character count: ",
       count,
       " (",
@@ -1427,13 +1500,13 @@ function SeoEditor({
   const pageTitle = pageTitleField.value ?? "";
   const description = descriptionField.value ?? "";
   const socialImageUrl = imagePreviewUrl ?? fallbackImageUrl;
-  return /* @__PURE__ */ jsxs8(
-    Box6,
+  return /* @__PURE__ */ jsxs9(
+    Box7,
     {
       sx: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 },
       children: [
-        /* @__PURE__ */ jsx14(
-          Box6,
+        /* @__PURE__ */ jsx15(
+          Box7,
           {
             sx: {
               flex: 1,
@@ -1442,17 +1515,17 @@ function SeoEditor({
               pb: 10,
               bgcolor: "background.level1"
             },
-            children: /* @__PURE__ */ jsxs8(Stack8, { direction: "row", sx: { gap: "56px", justifyContent: "center" }, children: [
-              /* @__PURE__ */ jsxs8(Stack8, { sx: { width: 571 }, spacing: 3, children: [
-                /* @__PURE__ */ jsxs8(Stack8, { spacing: 1, children: [
+            children: /* @__PURE__ */ jsxs9(Stack8, { direction: "row", sx: { gap: "56px", justifyContent: "center" }, children: [
+              /* @__PURE__ */ jsxs9(Stack8, { sx: { width: 571 }, spacing: 3, children: [
+                /* @__PURE__ */ jsxs9(Stack8, { spacing: 1, children: [
                   renderers?.text ? renderers.text({
                     name: "pageTitle",
                     label: "Page Title",
                     value: pageTitleField.value ?? null,
                     onChange: pageTitleField.handleValueChange
-                  }) : /* @__PURE__ */ jsxs8(Fragment2, { children: [
-                    /* @__PURE__ */ jsx14(Typography5, { variant: "subtitle2", children: "Page Title" }),
-                    /* @__PURE__ */ jsx14(
+                  }) : /* @__PURE__ */ jsxs9(Fragment2, { children: [
+                    /* @__PURE__ */ jsx15(Typography5, { variant: "subtitle2", children: "Page Title" }),
+                    /* @__PURE__ */ jsx15(
                       FieldText2,
                       {
                         field: pageTitleField,
@@ -1462,17 +1535,17 @@ function SeoEditor({
                       }
                     )
                   ] }),
-                  /* @__PURE__ */ jsx14(CharacterCount, { value: pageTitle, min: 45, max: 60 })
+                  /* @__PURE__ */ jsx15(CharacterCount, { value: pageTitle, min: 45, max: 60 })
                 ] }),
-                /* @__PURE__ */ jsxs8(Stack8, { spacing: 1, children: [
+                /* @__PURE__ */ jsxs9(Stack8, { spacing: 1, children: [
                   renderers?.textarea ? renderers.textarea({
                     name: "description",
                     label: "Description",
                     value: descriptionField.value ?? null,
                     onChange: descriptionField.handleValueChange
-                  }) : /* @__PURE__ */ jsxs8(Fragment2, { children: [
-                    /* @__PURE__ */ jsx14(Typography5, { variant: "subtitle2", children: "Description" }),
-                    /* @__PURE__ */ jsx14(
+                  }) : /* @__PURE__ */ jsxs9(Fragment2, { children: [
+                    /* @__PURE__ */ jsx15(Typography5, { variant: "subtitle2", children: "Description" }),
+                    /* @__PURE__ */ jsx15(
                       FieldText2,
                       {
                         field: descriptionField,
@@ -1484,15 +1557,15 @@ function SeoEditor({
                       }
                     )
                   ] }),
-                  /* @__PURE__ */ jsx14(CharacterCount, { value: description, min: 100, max: 150 })
+                  /* @__PURE__ */ jsx15(CharacterCount, { value: description, min: 100, max: 150 })
                 ] }),
                 imageField && renderImageField && renderImageField(imageField)
               ] }),
-              /* @__PURE__ */ jsxs8(Stack8, { sx: { width: 555 }, spacing: 3, children: [
-                /* @__PURE__ */ jsxs8(Stack8, { spacing: 1, children: [
-                  /* @__PURE__ */ jsx14(Typography5, { variant: "subtitle2", children: "Search Preview" }),
-                  /* @__PURE__ */ jsx14(
-                    Box6,
+              /* @__PURE__ */ jsxs9(Stack8, { sx: { width: 555 }, spacing: 3, children: [
+                /* @__PURE__ */ jsxs9(Stack8, { spacing: 1, children: [
+                  /* @__PURE__ */ jsx15(Typography5, { variant: "subtitle2", children: "Search Preview" }),
+                  /* @__PURE__ */ jsx15(
+                    Box7,
                     {
                       sx: {
                         bgcolor: "white",
@@ -1500,10 +1573,10 @@ function SeoEditor({
                         p: 2,
                         boxShadow: "0px 0px 0px 1px rgba(0,0,0,0.06), 0px 5px 22px 0px rgba(0,0,0,0.04)"
                       },
-                      children: /* @__PURE__ */ jsxs8(Stack8, { spacing: 1.5, children: [
-                        /* @__PURE__ */ jsxs8(Stack8, { direction: "row", spacing: 1, alignItems: "center", children: [
-                          /* @__PURE__ */ jsx14(
-                            Box6,
+                      children: /* @__PURE__ */ jsxs9(Stack8, { spacing: 1.5, children: [
+                        /* @__PURE__ */ jsxs9(Stack8, { direction: "row", spacing: 1, alignItems: "center", children: [
+                          /* @__PURE__ */ jsx15(
+                            Box7,
                             {
                               sx: {
                                 width: FAVICON_CHIP_SIZE,
@@ -1518,8 +1591,8 @@ function SeoEditor({
                               }
                             }
                           ),
-                          /* @__PURE__ */ jsxs8(Stack8, { children: [
-                            /* @__PURE__ */ jsx14(
+                          /* @__PURE__ */ jsxs9(Stack8, { children: [
+                            /* @__PURE__ */ jsx15(
                               Typography5,
                               {
                                 sx: {
@@ -1531,7 +1604,7 @@ function SeoEditor({
                                 children: fallbackTitle
                               }
                             ),
-                            /* @__PURE__ */ jsx14(
+                            /* @__PURE__ */ jsx15(
                               Typography5,
                               {
                                 sx: {
@@ -1545,7 +1618,7 @@ function SeoEditor({
                             )
                           ] })
                         ] }),
-                        /* @__PURE__ */ jsx14(
+                        /* @__PURE__ */ jsx15(
                           Typography5,
                           {
                             sx: {
@@ -1557,7 +1630,7 @@ function SeoEditor({
                             children: pageTitle || fallbackTitle
                           }
                         ),
-                        /* @__PURE__ */ jsx14(
+                        /* @__PURE__ */ jsx15(
                           Typography5,
                           {
                             sx: {
@@ -1573,10 +1646,10 @@ function SeoEditor({
                     }
                   )
                 ] }),
-                /* @__PURE__ */ jsxs8(Stack8, { spacing: 1, children: [
-                  /* @__PURE__ */ jsx14(Typography5, { variant: "subtitle2", children: "Social Media Preview" }),
-                  /* @__PURE__ */ jsxs8(
-                    Box6,
+                /* @__PURE__ */ jsxs9(Stack8, { spacing: 1, children: [
+                  /* @__PURE__ */ jsx15(Typography5, { variant: "subtitle2", children: "Social Media Preview" }),
+                  /* @__PURE__ */ jsxs9(
+                    Box7,
                     {
                       sx: {
                         bgcolor: "white",
@@ -1585,8 +1658,8 @@ function SeoEditor({
                         boxShadow: "0px 0px 0px 1px rgba(0,0,0,0.06), 0px 5px 22px 0px rgba(0,0,0,0.04)"
                       },
                       children: [
-                        /* @__PURE__ */ jsx14(
-                          Box6,
+                        /* @__PURE__ */ jsx15(
+                          Box7,
                           {
                             sx: {
                               height: 260,
@@ -1597,13 +1670,13 @@ function SeoEditor({
                             }
                           }
                         ),
-                        /* @__PURE__ */ jsxs8(
+                        /* @__PURE__ */ jsxs9(
                           Stack8,
                           {
                             sx: { bgcolor: "grey.100", px: 2, py: 1.5 },
                             spacing: 0.5,
                             children: [
-                              /* @__PURE__ */ jsx14(
+                              /* @__PURE__ */ jsx15(
                                 Typography5,
                                 {
                                   sx: {
@@ -1615,7 +1688,7 @@ function SeoEditor({
                                   children: siteName
                                 }
                               ),
-                              /* @__PURE__ */ jsx14(
+                              /* @__PURE__ */ jsx15(
                                 Typography5,
                                 {
                                   sx: {
@@ -1627,7 +1700,7 @@ function SeoEditor({
                                   children: pageTitle || fallbackTitle
                                 }
                               ),
-                              /* @__PURE__ */ jsx14(
+                              /* @__PURE__ */ jsx15(
                                 Typography5,
                                 {
                                   sx: {
@@ -1652,7 +1725,7 @@ function SeoEditor({
             ] })
           }
         ),
-        /* @__PURE__ */ jsx14(
+        /* @__PURE__ */ jsx15(
           Stack8,
           {
             direction: "row",
@@ -1666,7 +1739,7 @@ function SeoEditor({
               borderColor: "divider",
               bgcolor: "background.paper"
             },
-            children: /* @__PURE__ */ jsx14(
+            children: /* @__PURE__ */ jsx15(
               Button5,
               {
                 variant: "contained",
@@ -1691,28 +1764,28 @@ import {
   DialogContentText,
   DialogTitle as DialogTitle4
 } from "@mui/material";
-import { jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
 function UnsavedChangesDialog({
   open,
   onClose,
   onSave,
   onContinueWithoutSaving
 }) {
-  return /* @__PURE__ */ jsxs9(Dialog4, { open, onClose, maxWidth: "xs", fullWidth: true, children: [
-    /* @__PURE__ */ jsx15(DialogTitle4, { children: "Unsaved changes" }),
-    /* @__PURE__ */ jsx15(DialogContent4, { children: /* @__PURE__ */ jsx15(DialogContentText, { children: "You have unsaved changes. Save them before leaving, or continue without saving?" }) }),
-    /* @__PURE__ */ jsxs9(DialogActions3, { children: [
-      /* @__PURE__ */ jsx15(Button6, { onClick: onClose, color: "inherit", children: "Cancel" }),
-      /* @__PURE__ */ jsx15(Button6, { onClick: onContinueWithoutSaving, color: "error", children: "Continue without saving" }),
-      /* @__PURE__ */ jsx15(Button6, { onClick: onSave, variant: "contained", children: "Save" })
+  return /* @__PURE__ */ jsxs10(Dialog4, { open, onClose, maxWidth: "xs", fullWidth: true, children: [
+    /* @__PURE__ */ jsx16(DialogTitle4, { children: "Unsaved changes" }),
+    /* @__PURE__ */ jsx16(DialogContent4, { children: /* @__PURE__ */ jsx16(DialogContentText, { children: "You have unsaved changes. Save them before leaving, or continue without saving?" }) }),
+    /* @__PURE__ */ jsxs10(DialogActions3, { children: [
+      /* @__PURE__ */ jsx16(Button6, { onClick: onClose, color: "inherit", children: "Cancel" }),
+      /* @__PURE__ */ jsx16(Button6, { onClick: onContinueWithoutSaving, color: "error", children: "Continue without saving" }),
+      /* @__PURE__ */ jsx16(Button6, { onClick: onSave, variant: "contained", children: "Save" })
     ] })
   ] });
 }
 
 // src/contexts/VariantEditorContext.tsx
-import React6 from "react";
-import { jsx as jsx16 } from "react/jsx-runtime";
-var VariantEditorContext = React6.createContext(
+import React7 from "react";
+import { jsx as jsx17 } from "react/jsx-runtime";
+var VariantEditorContext = React7.createContext(
   null
 );
 function VariantEditorProvider({
@@ -1721,9 +1794,9 @@ function VariantEditorProvider({
   defaultDimension,
   ...actions
 }) {
-  const actionsRef = React6.useRef(actions);
+  const actionsRef = React7.useRef(actions);
   actionsRef.current = actions;
-  const value = React6.useMemo(
+  const value = React7.useMemo(
     () => ({
       callApi: (...args) => actionsRef.current.callApi(...args),
       toast: {
@@ -1736,10 +1809,10 @@ function VariantEditorProvider({
     }),
     [getParams, defaultDimension]
   );
-  return /* @__PURE__ */ jsx16(VariantEditorContext.Provider, { value, children });
+  return /* @__PURE__ */ jsx17(VariantEditorContext.Provider, { value, children });
 }
 function useVariantEditorContext() {
-  const context = React6.useContext(VariantEditorContext);
+  const context = React7.useContext(VariantEditorContext);
   if (!context) {
     throw new Error(
       "useVariantEditorContext must be used within a VariantEditorProvider"
@@ -1952,12 +2025,12 @@ function useVariantActions({
 }
 
 // src/hooks/use-variant-editor.ts
-import React8 from "react";
+import React9 from "react";
 
 // src/hooks/use-variant-form.ts
-import React7 from "react";
+import React8 from "react";
 import { useForm } from "react-typed-form";
-var useIsomorphicLayoutEffect = typeof window === "undefined" ? React7.useEffect : React7.useLayoutEffect;
+var useIsomorphicLayoutEffect = typeof window === "undefined" ? React8.useEffect : React8.useLayoutEffect;
 function useVariantForm({
   savedValues,
   resetKey,
@@ -2016,7 +2089,7 @@ function useVariantEditor({
     value,
     currentVariant
   });
-  const savedValues = React8.useMemo(
+  const savedValues = React9.useMemo(
     () => toFormValues(currentDetail),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentDetail]

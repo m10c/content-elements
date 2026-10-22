@@ -407,7 +407,7 @@ declare function useSortableItem(id: string, disabled?: boolean): {
             transform: string | undefined;
             transition: string | undefined;
             position: "relative";
-            zIndex: number | undefined;
+            opacity: number | undefined;
         };
     };
     handleProps: {
