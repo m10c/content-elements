@@ -1,5 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 
+export type DropSide = 'before' | 'after';
+
 export default function useSortableItem(id: string, disabled = false) {
   const {
     attributes,
@@ -9,7 +11,19 @@ export default function useSortableItem(id: string, disabled = false) {
     transform,
     transition,
     isDragging,
+    index,
+    activeIndex,
+    overIndex,
   } = useSortable({ id, disabled });
+
+  // Matches how onMove places the item: after the hovered item when dragging
+  // down, before it when dragging up.
+  const dropSide: DropSide | null =
+    activeIndex === -1 || index !== overIndex || activeIndex === overIndex
+      ? null
+      : activeIndex < overIndex
+        ? 'after'
+        : 'before';
 
   return {
     itemProps: {
@@ -23,6 +37,8 @@ export default function useSortableItem(id: string, disabled = false) {
         zIndex: isDragging ? 1 : undefined,
       },
     },
+    isDragging,
+    dropSide,
     // Only the handle starts a drag, so text inside the item stays selectable.
     handleProps: {
       ref: setActivatorNodeRef,

@@ -26,6 +26,7 @@ import { FieldProp } from 'react-typed-form';
 
 import useListKeys from '../hooks/use-list-keys';
 import useSortableItem from '../hooks/use-sortable-item';
+import dropIndicatorSx from '../utils/drop-indicator-sx';
 import emptyFieldValue from '../utils/empty-field-value';
 import moveItem from '../utils/move-item';
 import BlockCardFrame from './BlockCardFrame';
@@ -44,6 +45,10 @@ import type {
   ListField,
   SimpleField,
 } from '../types';
+
+// Theme spacing between sortable items, which the drop line sits in.
+const BLOCK_GAP = 3;
+const LIST_ITEM_GAP = 1.5;
 
 /** Icons a consumer can swap for its own icon set. */
 export type ListCardIcons = {
@@ -146,10 +151,11 @@ function BlocksField(
 
   return (
     <>
-      <Stack spacing={canEditBlockList ? 3 : 2}>
+      <Stack spacing={canEditBlockList ? BLOCK_GAP : 2}>
         {header}
         {blocks.length === 0 && emptyState}
-        <SortableList ids={keys} onMove={moveBlock}>
+        {/* A dragged block collapses, moving the blocks below it. */}
+        <SortableList ids={keys} onMove={moveBlock} measureWhileDragging>
           {blocks.map((block, index) => {
             const key = keys[index];
             if (key === undefined) {
@@ -232,7 +238,10 @@ function BlockCard({
   onChange,
   onDelete,
 }: BlockCardProps) {
-  const { itemProps, handleProps } = useSortableItem(sortableId, !canReorder);
+  const { itemProps, isDragging, dropSide, handleProps } = useSortableItem(
+    sortableId,
+    !canReorder,
+  );
   const [headerActionContainer, setHeaderActionContainer] =
     React.useState<HTMLElement | null>(null);
 
@@ -309,6 +318,8 @@ function BlockCard({
     </Typography>
   );
 
+  const hasBody = !Array.isArray(body) || body.length > 0;
+
   const card =
     canReorder || onDelete ? (
       <BlockCardFrame
@@ -316,7 +327,13 @@ function BlockCard({
           canReorder && (
             <Box
               {...handleProps}
-              sx={{ display: 'flex', color: 'primary.main' }}
+              // Not stretched down the gutter: a long block grabbed far below
+              // its top would collapse out from under the cursor.
+              sx={{
+                display: 'flex',
+                alignSelf: 'flex-start',
+                color: 'primary.main',
+              }}
             >
               {icons?.drag ?? <DragIndicatorIcon />}
             </Box>
@@ -338,7 +355,13 @@ function BlockCard({
           </Stack>
         }
       >
-        {body}
+        {/* Collapsed while dragging so a long block doesn't push the drop
+            targets out of view. Hidden, not unmounted, to keep editor state. */}
+        {hasBody && (
+          <Stack spacing={2} sx={{ display: isDragging ? 'none' : undefined }}>
+            {body}
+          </Stack>
+        )}
       </BlockCardFrame>
     ) : (
       <Card>
@@ -352,15 +375,16 @@ function BlockCard({
     );
 
   return (
-    <div
-      ref={(element) => {
+    <Box
+      ref={(element: HTMLDivElement | null) => {
         itemProps.ref(element);
         elementRef(element);
       }}
       style={itemProps.style}
+      sx={[dropIndicatorSx(dropSide, BLOCK_GAP)]}
     >
       {card}
-    </div>
+    </Box>
   );
 }
 
@@ -776,7 +800,7 @@ function ListCards({
   }
 
   return (
-    <Stack spacing={1.5}>
+    <Stack spacing={LIST_ITEM_GAP}>
       {!isFixedLength && (
         <Stack
           direction="row"
@@ -888,7 +912,7 @@ function ListItemCard({
   errors,
   onEdit,
 }: ListItemCardProps) {
-  const { itemProps, handleProps } = useSortableItem(sortableId);
+  const { itemProps, dropSide, handleProps } = useSortableItem(sortableId);
 
   return (
     <Stack
@@ -896,7 +920,10 @@ function ListItemCard({
       direction="row"
       spacing={1}
       alignItems="flex-start"
-      sx={{ p: 2, borderRadius: 1, bgcolor: 'grey.100' }}
+      sx={[
+        { p: 2, borderRadius: 1, bgcolor: 'grey.100' },
+        dropIndicatorSx(dropSide, LIST_ITEM_GAP),
+      ]}
     >
       <Box {...handleProps} sx={{ display: 'flex', color: 'primary.main' }}>
         {icons?.drag ?? <DragIndicatorIcon fontSize="small" />}

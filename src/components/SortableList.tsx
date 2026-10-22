@@ -3,6 +3,7 @@
 import {
   DndContext,
   KeyboardSensor,
+  MeasuringStrategy,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -19,9 +20,16 @@ type Props = {
   ids: string[];
   onMove: (from: number, to: number) => void;
   children: React.ReactNode;
+  /** Re-measure items throughout a drag, for items that change height mid-drag. */
+  measureWhileDragging?: boolean;
 };
 
-export default function SortableList({ ids, onMove, children }: Props) {
+export default function SortableList({
+  ids,
+  onMove,
+  children,
+  measureWhileDragging = false,
+}: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -33,6 +41,11 @@ export default function SortableList({ ids, onMove, children }: Props) {
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      measuring={
+        measureWhileDragging
+          ? { droppable: { strategy: MeasuringStrategy.Always } }
+          : undefined
+      }
       onDragEnd={({ active, over }) => {
         if (!over || active.id === over.id) return;
         const from = ids.indexOf(String(active.id));
