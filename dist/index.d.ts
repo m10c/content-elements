@@ -1,211 +1,35 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
-import React$1 from 'react';
+import React from 'react';
+import { P as PreviewDevice, B as BlockTypeInput, a as BlockType, b as Block, c as BlockFieldRenderers, d as BlockFieldPreviews, e as BlockErrors, f as BlockComponentProps, D as DimensionOption, g as DimensionChip, V as VariantEditorConfig, h as VariantBase, i as VariantDetailBase, j as Dimension, U as UnsavedChangesGuard, T as Translations, k as VariantEditorState, l as BlockTypeField } from './website-YLVNCs6N.js';
+export { m as BlockFieldPreview, n as BlockFieldRenderer, o as BlockFieldRendererProps, C as CallApi, L as ListField, p as ListItem, q as PREVIEW_MESSAGE, r as PreviewMessage, S as SimpleField, s as SimpleFieldKind, t as UseWebsitePageDataResult, u as usePreviewReceiver, v as usePreviewSender, w as useWebsiteGlobalData, x as useWebsitePageData } from './website-YLVNCs6N.js';
 import { CardProps } from '@mui/material';
-import { FieldProp, FormObject, useForm } from 'react-typed-form';
-export { usePreviewSender, useWebsiteGlobalData, useWebsitePageData } from './hooks.js';
+import { FieldProp, useForm, FormObject } from 'react-typed-form';
 
 declare const PREVIEW_DEVICE_WIDTHS: Record<PreviewDevice, number>;
-
-declare const PREVIEW_MESSAGE: {
-    readonly content: "m10c-cms-preview";
-    readonly ready: "m10c-cms-preview-ready";
-};
-
-type SimpleFieldKind = 'text' | 'textarea' | 'richtext' | 'markdown' | 'icon' | 'image' | 'images' | 'select' | 'boolean' | 'note';
-type SimpleField = {
-    kind: SimpleFieldKind;
-    label?: string;
-    /** Marks the label with an asterisk. */
-    required?: boolean;
-    maxLength?: number;
-    /** Markdown feature flags, e.g. ['bold', 'italic', 'lists', 'links'] */
-    features?: string[];
-    /** Guidance under the label. */
-    hint?: string;
-    /** The size an image should be, e.g. '480x320', shown as a hint. */
-    dimensions?: string;
-    /** Fixed text before the input, e.g. a currency symbol. */
-    prefix?: string;
-    /** What a `note` field says in place of an input. */
-    text?: string;
-    /** What a `select` field offers. */
-    options?: string[];
-    /** Caps how many an `images` field holds. */
-    maxItems?: number;
-};
-type ListField = {
-    kind: 'list';
-    label?: string;
-    /** Marks the label with an asterisk. */
-    required?: boolean;
-    itemLabel?: string;
-    minItems?: number;
-    maxItems?: number;
-    /**
-     * `cards` (the default) shows each item as a summary card that opens a
-     * dialog to edit, and lets an admin add and delete items. `inline` lists
-     * every item's fields one after another, and items can only be edited.
-     */
-    variant?: 'inline' | 'cards';
-    /**
-     * Sibling fields of the same block to render under this list's heading, e.g.
-     * a subtitle that introduces the items. They are skipped where they would
-     * otherwise appear in the block.
-     */
-    headerFieldKeys?: string[];
-    /**
-     * Placeholders an admin can type into this list's fields, listed at the top
-     * of the dialog that edits an item.
-     */
-    variables?: {
-        token: string;
-        description: string;
-    }[];
-    itemFields: Record<string, SimpleField>;
-};
-type BlockTypeField = SimpleField | ListField;
-type BlockType = {
-    key: string;
-    label: string;
-    /** Hides the block's heading, for a block whose single field is titled. */
-    hideLabel?: boolean;
-    fields: Record<string, BlockTypeField>;
-};
-/**
- * Boundary type for the `blockTypes` prop. Consumers pass block types straight
- * from their generated `/block-types` endpoint, whose schema can't express the
- * rich `fields` metadata (it commonly generates as `string[]`). We accept the
- * structural minimum here and narrow `fields` to `BlockType` internally, so
- * consumers never need to cast or import `BlockType`.
- */
-type BlockTypeInput = {
-    key: string;
-    label: string;
-    fields: unknown;
-};
-type Block = {
-    type: string;
-    data: Record<string, unknown>;
-};
-type BlockFieldRendererProps = {
-    name: string;
-    label: string;
-    value: string | null;
-    /** The formats the field's schema allows, e.g. ['bold', 'link']. */
-    features?: string[];
-    /** Guidance under the label, e.g. the dimensions an image should have. */
-    hint?: string;
-    /** Fixed text before the input, e.g. a currency symbol. */
-    prefix?: string;
-    /** A validation message for the field, e.g. from the server. */
-    error?: string;
-    /** The saved values of a field that holds several, e.g. `images`. */
-    values?: string[];
-    /** Caps how many values a field that holds several accepts. */
-    maxItems?: number;
-    /** Whether a `boolean` field is on. */
-    checked?: boolean;
-    onChange: (value: string | null) => void;
-    /** Replaces the values of a field that holds several. */
-    onChangeValues?: (values: string[]) => void;
-    /** Turns a `boolean` field on or off. */
-    onChangeChecked?: (checked: boolean) => void;
-};
-type BlockFieldRenderer = (props: BlockFieldRendererProps) => React.ReactNode;
-type BlockFieldRenderers = Partial<Record<SimpleFieldKind | string, BlockFieldRenderer>>;
-/**
- * Validation messages keyed by field path: `<block>.<field>` for a simple
- * field, `<block>.<field>.<item>.<subField>` inside a list.
- */
-type BlockErrors = Record<string, string>;
-/**
- * Draws a field's saved value inside a card summary, e.g. the icon a slug
- * names. Without one the value is shown as text.
- */
-type BlockFieldPreview = (value: string | null) => React.ReactNode;
-type BlockFieldPreviews = Partial<Record<SimpleFieldKind | string, BlockFieldPreview>>;
-type VariantBase = {
-    '@id': string;
-    publishAt?: string | null;
-    updatedAt?: string;
-};
-type VariantDetailBase = {
-    '@id': string;
-    updatedAt?: string;
-};
-type DimensionOption = {
-    value: string;
-    label: string;
-};
-type DimensionChip = {
-    label: string;
-    color: 'default' | 'success' | 'warning' | 'info';
-};
-type Dimension = {
-    key: string;
-    label: string;
-    pluralLabel: string;
-    options: readonly DimensionOption[];
-    defaultValue?: string;
-    translatable?: boolean;
-};
-type Translations = Record<string, unknown>;
-type VariantEditorConfig = {
-    callApi: CallApi;
-    toast: {
-        success: (message: string) => void;
-    };
-    push: (href: string) => void;
-    getParams: () => Record<string, string | undefined>;
-    setParams: (next: Record<string, string>) => void;
-    defaultDimension: Dimension;
-};
-type CallApi = <R>(path: string, requestOptions?: {
-    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-    jsonBody?: unknown;
-}, moreOptions?: {
-    addSubmitError?: (field: string, error: string) => void;
-}) => Promise<{
-    data: R;
-} | undefined>;
-type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
-type PreviewMessage = {
-    type: typeof PREVIEW_MESSAGE.content;
-    content: Record<string, unknown>;
-    pagePath?: string;
-    globals?: Record<string, unknown>;
-};
-type BlockComponentProps = {
-    block: Block;
-    onChange: (data: Record<string, unknown>) => void;
-    errors?: BlockErrors;
-    errorPath: string;
-    headerActionContainer: HTMLElement | null;
-};
 
 type Props$f = {
     open: boolean;
     onClose: () => void;
     blockTypes: readonly BlockTypeInput[];
     onSelect: (blockType: BlockType) => void;
-    icons?: Record<string, React$1.ReactNode>;
+    icons?: Record<string, React.ReactNode>;
     title?: string;
 };
 declare function AddBlockDialog({ open, onClose, blockTypes, onSelect, icons, title, }: Props$f): react_jsx_runtime.JSX.Element;
 
 type Props$e = Omit<CardProps, 'title'> & {
-    gutter?: React$1.ReactNode;
-    title?: React$1.ReactNode;
-    action?: React$1.ReactNode;
-    children?: React$1.ReactNode;
+    gutter?: React.ReactNode;
+    title?: React.ReactNode;
+    action?: React.ReactNode;
+    children?: React.ReactNode;
 };
 declare function BlockCardFrame({ gutter, title, action, children, sx, ...cardProps }: Props$e): react_jsx_runtime.JSX.Element;
 
 /** Icons a consumer can swap for its own icon set. */
 type ListCardIcons = {
-    drag?: React$1.ReactNode;
-    edit?: React$1.ReactNode;
-    delete?: React$1.ReactNode;
+    drag?: React.ReactNode;
+    edit?: React.ReactNode;
+    delete?: React.ReactNode;
 };
 type Props$d = {
     blockTypes: readonly BlockTypeInput[];
@@ -215,11 +39,11 @@ type Props$d = {
     icons?: ListCardIcons;
     errors?: BlockErrors;
     /** Must be stable components - a new component type remounts its blocks and loses input focus */
-    blockComponents?: Record<string, React$1.ComponentType<BlockComponentProps>>;
+    blockComponents?: Record<string, React.ComponentType<BlockComponentProps>>;
     canEditBlockList?: boolean;
-    header?: React$1.ReactNode;
-    footer?: React$1.ReactNode;
-    emptyState?: React$1.ReactNode;
+    header?: React.ReactNode;
+    footer?: React.ReactNode;
+    emptyState?: React.ReactNode;
 };
 type BlocksFieldHandle = {
     /**
@@ -228,14 +52,14 @@ type BlocksFieldHandle = {
      */
     scrollToBlock: (index: number) => void;
 };
-declare const _default: React$1.ForwardRefExoticComponent<Props$d & React$1.RefAttributes<BlocksFieldHandle>>;
+declare const _default: React.ForwardRefExoticComponent<Props$d & React.RefAttributes<BlocksFieldHandle>>;
 
 type Props$c = {
     open: boolean;
     title: string;
-    description: React$1.ReactNode;
-    subtitle?: React$1.ReactNode;
-    warning?: React$1.ReactNode;
+    description: React.ReactNode;
+    subtitle?: React.ReactNode;
+    warning?: React.ReactNode;
     confirmText?: string;
     confirmColor?: 'error' | 'primary' | 'warning' | 'success';
     isLoading?: boolean;
@@ -298,7 +122,7 @@ type Props$8 = {
 declare function PreviewDeviceSelect({ value, onChange, labels, }: Props$8): react_jsx_runtime.JSX.Element;
 
 type Props$7 = {
-    iframeRef: React$1.RefObject<HTMLIFrameElement | null>;
+    iframeRef: React.RefObject<HTMLIFrameElement | null>;
     src: string;
     renderWidth: number;
     title?: string;
@@ -306,9 +130,9 @@ type Props$7 = {
 declare function PreviewIframe({ iframeRef, src, renderWidth, title, }: Props$7): react_jsx_runtime.JSX.Element | null;
 
 type Props$6 = {
-    children: React$1.ReactNode;
-    preview: React$1.ReactNode;
-    previewToolbar?: React$1.ReactNode;
+    children: React.ReactNode;
+    preview: React.ReactNode;
+    previewToolbar?: React.ReactNode;
     previewWidth?: number;
 };
 declare function PreviewLayout({ children, preview, previewToolbar, previewWidth, }: Props$6): react_jsx_runtime.JSX.Element;
@@ -334,7 +158,7 @@ type Props$3 = {
     /** Draws the text fields, for an app whose inputs look nothing like these. */
     renderers?: BlockFieldRenderers;
     imageField?: FieldProp<string | null>;
-    renderImageField?: (field: FieldProp<string | null>) => React$1.ReactNode;
+    renderImageField?: (field: FieldProp<string | null>) => React.ReactNode;
     imagePreviewUrl?: string;
     /** The image the site shares when a page names none of its own. */
     fallbackImageUrl?: string;
@@ -353,7 +177,7 @@ declare function SeoEditor({ pageTitleField, descriptionField, renderers, imageF
 type Props$2 = {
     ids: string[];
     onMove: (from: number, to: number) => void;
-    children: React$1.ReactNode;
+    children: React.ReactNode;
 };
 declare function SortableList({ ids, onMove, children }: Props$2): react_jsx_runtime.JSX.Element;
 
@@ -366,13 +190,14 @@ type Props$1 = {
 declare function UnsavedChangesDialog({ open, onClose, onSave, onContinueWithoutSaving, }: Props$1): react_jsx_runtime.JSX.Element;
 
 type Props = VariantEditorConfig & {
-    children: React$1.ReactNode;
+    children: React.ReactNode;
 };
-declare function VariantEditorProvider({ children, getParams, defaultDimension, ...actions }: Props): react_jsx_runtime.JSX.Element;
+declare function VariantEditorProvider({ children, ...config }: Props): react_jsx_runtime.JSX.Element;
 declare function useVariantEditorContext(): VariantEditorConfig;
 
-type Options$2<V extends VariantBase> = {
+type Options$3<V extends VariantBase> = {
     dimension: Dimension;
+    defaultValue: string | undefined;
     variants: readonly V[];
     value: string;
     onValueChange: (value: string) => void;
@@ -392,12 +217,13 @@ type DimensionSwitcher<V extends VariantBase, D extends VariantDetailBase> = {
     getLabel: (value: string) => string;
     getChips: (value: string) => DimensionChip[];
 };
-declare function useDimensionSwitcher<V extends VariantBase, D extends VariantDetailBase>({ dimension, variants, value, onValueChange, publishable, }: Options$2<V>): DimensionSwitcher<V, D>;
+declare function useDimensionSwitcher<V extends VariantBase, D extends VariantDetailBase>({ dimension, defaultValue, variants, value, onValueChange, publishable, }: Options$3<V>): DimensionSwitcher<V, D>;
 
-declare function useListKeys(length: number): {
+declare function useKeyedList<T>(items: readonly T[], onChange: (items: T[]) => void): {
     keys: string[];
-    moveKey: (from: number, to: number) => void;
-    removeKey: (index: number) => void;
+    replace: (index: number, next: T) => void;
+    remove: (index: number) => void;
+    move: (from: number, to: number) => void;
 };
 
 declare function useSortableItem(id: string, disabled?: boolean): {
@@ -425,25 +251,17 @@ declare function useSortableItem(id: string, disabled?: boolean): {
     };
 };
 
-type Options$1 = {
+type Options$2 = {
     hasUnsavedChanges: boolean;
     onSave: () => Promise<boolean>;
 };
-type UnsavedChangesGuard = {
-    guard: (action: () => void) => void;
-    guardNavigate: (navigate: () => void) => Promise<boolean>;
-    hasUnsavedChanges: boolean;
-    hasPending: boolean;
-    handlePending: (save: boolean) => Promise<void>;
-    dismissPending: () => void;
-};
-declare function useUnsavedChangesGuard({ hasUnsavedChanges, onSave, }: Options$1): UnsavedChangesGuard;
+declare function useUnsavedChangesGuard({ hasUnsavedChanges, onSave, }: Options$2): UnsavedChangesGuard;
 
 type SubmitHelpers = {
     addSubmitError: (field: string, error: string) => void;
     setLoading: (loading: boolean) => void;
 };
-type Options<V extends VariantBase> = {
+type Options$1<V extends VariantBase> = {
     identityIri: string;
     variantsPath: string;
     entityLabel: string;
@@ -461,9 +279,9 @@ type VariantActionHandlers = {
     remove: () => Promise<boolean>;
     invalidate: () => void;
 };
-declare function useVariantActions<V extends VariantBase>({ identityIri, variantsPath, entityLabel, listPath, dimension, variants, value, currentVariant, }: Options<V>): VariantActionHandlers;
+declare function useVariantActions<V extends VariantBase>({ identityIri, variantsPath, entityLabel, listPath, dimension, variants, value, currentVariant, }: Options$1<V>): VariantActionHandlers;
 
-type UseVariantEditorOptions<V extends VariantBase, D extends VariantDetailBase, T extends Record<string, unknown>> = {
+type Options<V extends VariantBase, D extends VariantDetailBase, T extends Record<string, unknown>> = {
     identityIri: string;
     variantsPath: string;
     entityLabel: string;
@@ -471,27 +289,11 @@ type UseVariantEditorOptions<V extends VariantBase, D extends VariantDetailBase,
     variants: readonly V[];
     toFormValues: (detail: D | null) => T;
     dimension?: Dimension;
+    defaultValue?: string;
     publishable?: boolean;
     postValidateTransform?: (values: Partial<T>) => Record<string, unknown>;
 };
-type VariantEditorState<V extends VariantBase, D extends VariantDetailBase, T extends Record<string, unknown>> = {
-    entityLabel: string;
-    dimension: Dimension;
-    variants: readonly V[];
-    publishable: boolean;
-    switcher: DimensionSwitcher<V, D>;
-    form: FormObject<Partial<T>>;
-    guard: UnsavedChangesGuard;
-    actions: VariantActionHandlers;
-    canTranslate: boolean;
-    isPublished: boolean;
-    isNewVariant: boolean;
-    isLastVariant: boolean;
-    switchTo: (value: string) => void;
-    save: () => Promise<boolean>;
-    remove: () => Promise<boolean>;
-};
-declare function useVariantEditor<V extends VariantBase, D extends VariantDetailBase, T extends Record<string, unknown>>({ identityIri, variantsPath, entityLabel, listPath, variants, toFormValues, dimension: dimensionOverride, publishable, postValidateTransform, }: UseVariantEditorOptions<V, D, T>): VariantEditorState<V, D, T>;
+declare function useVariantEditor<V extends VariantBase, D extends VariantDetailBase, T extends Record<string, unknown>>({ identityIri, variantsPath, entityLabel, listPath, variants, toFormValues, dimension: dimensionOverride, defaultValue, publishable, postValidateTransform, }: Options<V, D, T>): VariantEditorState<V, D, T>;
 
 type FormObjectSubmit<T extends Record<string, unknown>> = Parameters<typeof useForm<T>>[0] extends {
     onSubmit: infer S;
@@ -513,4 +315,4 @@ declare function moveItem<T>(items: readonly T[], from: number, to: number): T[]
 
 declare function publishStatusChip(publishAt: string | null | undefined): DimensionChip;
 
-export { AddBlockDialog, type Block, BlockCardFrame, type BlockComponentProps, type BlockErrors, type BlockFieldPreview, type BlockFieldPreviews, type BlockFieldRenderer, type BlockFieldRendererProps, type BlockFieldRenderers, type BlockType, type BlockTypeField, type BlockTypeInput, _default as BlocksField, type BlocksFieldHandle, type CallApi, ConfirmDialog, type Dimension, type DimensionChip, type DimensionOption, DimensionSelect, type ListCardIcons, type ListField, LivePreview, PREVIEW_DEVICE_WIDTHS, PREVIEW_MESSAGE, PageEditor, type PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, type PreviewMessage, PreviewToggleButton, PublishState, SeoEditor, type SimpleField, type SimpleFieldKind, SortableList, type Translations, UnsavedChangesDialog, type VariantBase, type VariantDetailBase, type VariantEditorConfig, VariantEditorProvider, createBlock, dimensionValue, emptyFieldValue, moveItem, publishStatusChip, useDimensionSwitcher, useListKeys, useSortableItem, useUnsavedChangesGuard, useVariantActions, useVariantEditor, useVariantEditorContext, useVariantForm };
+export { AddBlockDialog, Block, BlockCardFrame, BlockComponentProps, BlockErrors, BlockFieldPreviews, BlockFieldRenderers, BlockType, BlockTypeField, BlockTypeInput, _default as BlocksField, type BlocksFieldHandle, ConfirmDialog, Dimension, DimensionChip, DimensionOption, DimensionSelect, type ListCardIcons, LivePreview, PREVIEW_DEVICE_WIDTHS, PageEditor, PreviewDevice, PreviewDeviceSelect, PreviewIframe, PreviewLayout, PreviewToggleButton, PublishState, SeoEditor, SortableList, Translations, UnsavedChangesDialog, UnsavedChangesGuard, VariantBase, VariantDetailBase, VariantEditorConfig, VariantEditorProvider, VariantEditorState, createBlock, dimensionValue, emptyFieldValue, moveItem, publishStatusChip, useDimensionSwitcher, useKeyedList, useSortableItem, useUnsavedChangesGuard, useVariantActions, useVariantEditor, useVariantEditorContext, useVariantForm };

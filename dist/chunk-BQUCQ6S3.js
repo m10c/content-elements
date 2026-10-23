@@ -64,15 +64,42 @@ function usePreviewSender(config) {
   return { iframeRef };
 }
 
-// src/hooks/use-website-global-data.ts
+// src/hooks/use-preview-receiver.ts
 import { useEffect as useEffect2, useState } from "react";
+function usePreviewReceiver({
+  pagePath,
+  enabled = true,
+  allowedOrigins
+}) {
+  const [content, setContent] = useState(null);
+  const originsKey = allowedOrigins?.join(" ");
+  useEffect2(() => {
+    if (!enabled) return;
+    const origins = originsKey?.split(" ");
+    function handleMessage(event) {
+      if (origins && !origins.includes(event.origin)) return;
+      const message = event.data;
+      if (message?.type !== preview_message_default.content) return;
+      if (message.pagePath === pagePath) {
+        setContent(message.content);
+      }
+    }
+    window.addEventListener("message", handleMessage);
+    window.parent.postMessage({ type: preview_message_default.ready }, "*");
+    return () => window.removeEventListener("message", handleMessage);
+  }, [enabled, pagePath, originsKey]);
+  return content;
+}
+
+// src/hooks/use-website-global-data.ts
+import { useEffect as useEffect3, useState as useState2 } from "react";
 function useWebsiteGlobalData(config) {
-  const [previewData, setPreviewData] = useState(null);
-  const [isPreview] = useState(() => {
+  const [previewData, setPreviewData] = useState2(null);
+  const [isPreview] = useState2(() => {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("preview") || window.self !== window.top;
   });
-  useEffect2(() => {
+  useEffect3(() => {
     if (!isPreview) return;
     function handleMessage(event) {
       const message = event.data;
@@ -94,31 +121,21 @@ function useWebsiteGlobalData(config) {
 }
 
 // src/hooks/use-website-page-data.ts
-import { useEffect as useEffect3, useState as useState2 } from "react";
+import { useEffect as useEffect4, useState as useState3 } from "react";
 function useWebsitePageData(config) {
-  const [apiData, setApiData] = useState2(
+  const [apiData, setApiData] = useState3(
     config.initialData ?? {}
   );
-  const [previewData, setPreviewData] = useState2(null);
-  const [isLoading, setIsLoading] = useState2(false);
-  const [isPreview] = useState2(() => {
+  const [isLoading, setIsLoading] = useState3(false);
+  const [isPreview] = useState3(() => {
     if (typeof window === "undefined") return false;
     return new URLSearchParams(window.location.search).has("preview") || window.self !== window.top;
   });
-  useEffect3(() => {
-    if (!isPreview) return;
-    function handleMessage(event) {
-      const message = event.data;
-      if (message?.type !== preview_message_default.content) return;
-      if (message.pagePath === config.path) {
-        setPreviewData(message.content);
-      }
-    }
-    window.addEventListener("message", handleMessage);
-    window.parent.postMessage({ type: preview_message_default.ready }, "*");
-    return () => window.removeEventListener("message", handleMessage);
-  }, [isPreview, config.path]);
-  useEffect3(() => {
+  const previewData = usePreviewReceiver({
+    pagePath: config.path,
+    enabled: isPreview
+  });
+  useEffect4(() => {
     if (isPreview || config.initialData || !config.fetchData) return;
     setIsLoading(true);
     config.fetchData().then((result) => {
@@ -138,7 +155,8 @@ export {
   preview_device_widths_default,
   preview_message_default,
   usePreviewSender,
+  usePreviewReceiver,
   useWebsiteGlobalData,
   useWebsitePageData
 };
-//# sourceMappingURL=chunk-BBTXX22U.js.map
+//# sourceMappingURL=chunk-BQUCQ6S3.js.map
