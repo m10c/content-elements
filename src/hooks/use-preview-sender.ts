@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+import { PREVIEW_MESSAGE } from '../constants';
+import type { PreviewMessage } from '../types';
+
 type UsePreviewSenderConfig = {
   /** The full preview URL to load in the iframe */
   previewUrl: string;
-  /** The current page path */
-  pagePath: string;
   /** The current form content to send to the preview */
   content: Record<string, unknown>;
+  /** The current page path */
+  pagePath?: string;
   /** Global content (footer, navigation, …) keyed by page path. */
   globals?: Record<string, unknown>;
 };
@@ -14,6 +17,14 @@ type UsePreviewSenderConfig = {
 type UsePreviewSenderResult = {
   /** Ref to attach to the iframe element */
   iframeRef: React.RefObject<HTMLIFrameElement | null>;
+};
+
+const getOrigin = (url: string) => {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
 };
 
 export default function usePreviewSender(
@@ -25,37 +36,47 @@ export default function usePreviewSender(
   const globalsRef = useRef(config.globals);
   globalsRef.current = config.globals;
 
+  const previewOrigin = getOrigin(config.previewUrl);
+
+  const post = useCallback(
+    (message: PreviewMessage) => {
+      const target = iframeRef.current?.contentWindow;
+      if (!target || !previewOrigin) return;
+      target.postMessage(message, previewOrigin);
+    },
+    [previewOrigin],
+  );
+
   const sendContent = useCallback(
     (
       content: Record<string, unknown>,
       globals: Record<string, unknown> | undefined,
-    ) => {
-      const iframe = iframeRef.current;
-      if (!iframe?.contentWindow || !config.previewUrl) return;
-
-      iframe.contentWindow.postMessage(
-        {
-          type: 'm10c-cms-preview',
-          content,
-          pagePath: config.pagePath,
-          globals,
-        },
-        config.previewUrl,
-      );
-    },
-    [config.pagePath, config.previewUrl],
+    ) =>
+      post({
+        type: PREVIEW_MESSAGE.content,
+        content,
+        pagePath: config.pagePath,
+        globals,
+      }),
+    [post, config.pagePath],
   );
 
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
-      if (event.data?.type === 'm10c-cms-preview-ready') {
+      if (
+        event.origin !== previewOrigin ||
+        event.source !== iframeRef.current?.contentWindow
+      ) {
+        return;
+      }
+      if (event.data?.type === PREVIEW_MESSAGE.ready) {
         sendContent(contentRef.current, globalsRef.current);
       }
     }
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [sendContent]);
+  }, [previewOrigin, sendContent]);
 
   useEffect(() => {
     sendContent(config.content, config.globals);
