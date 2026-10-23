@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { PREVIEW_MESSAGE } from '../constants';
-import type { PreviewMessage } from '../types';
+import type { UseWebsitePageDataResult } from '../types';
+import usePreviewReceiver from './use-preview-receiver';
 
 type UseWebsitePageDataConfig = {
   path: string;
@@ -11,22 +11,12 @@ type UseWebsitePageDataConfig = {
   fetchData?: () => Promise<Record<string, unknown>>;
 };
 
-export type UseWebsitePageDataResult = {
-  data: Record<string, unknown>;
-  isPreview: boolean;
-  isLoading: boolean;
-};
-
 export default function useWebsitePageData(
   config: UseWebsitePageDataConfig,
 ): UseWebsitePageDataResult {
   const [apiData, setApiData] = useState<Record<string, unknown>>(
     config.initialData ?? {},
   );
-  const [previewData, setPreviewData] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [isPreview] = useState(() => {
@@ -37,23 +27,10 @@ export default function useWebsitePageData(
     );
   });
 
-  useEffect(() => {
-    if (!isPreview) return;
-
-    function handleMessage(event: MessageEvent) {
-      const message = event.data as PreviewMessage;
-      if (message?.type !== PREVIEW_MESSAGE.content) return;
-      // Ignore edits aimed at another page/global so this page keeps its data.
-      if (message.pagePath === config.path) {
-        setPreviewData(message.content);
-      }
-    }
-
-    window.addEventListener('message', handleMessage);
-    window.parent.postMessage({ type: PREVIEW_MESSAGE.ready }, '*');
-
-    return () => window.removeEventListener('message', handleMessage);
-  }, [isPreview, config.path]);
+  const previewData = usePreviewReceiver({
+    pagePath: config.path,
+    enabled: isPreview,
+  });
 
   useEffect(() => {
     if (isPreview || config.initialData || !config.fetchData) return;

@@ -1,23 +1,21 @@
 'use client';
 
 import React from 'react';
-import type { FormObject } from 'react-typed-form';
 
 import { useVariantEditorContext } from '../contexts';
-import type { Dimension, VariantBase, VariantDetailBase } from '../types';
+import type {
+  Dimension,
+  VariantBase,
+  VariantDetailBase,
+  VariantEditorState,
+} from '../types';
 import dimensionValue from '../utils/dimension-value';
-import useDimensionSwitcher, {
-  type DimensionSwitcher,
-} from './use-dimension-switcher';
-import useUnsavedChangesGuard, {
-  type UnsavedChangesGuard,
-} from './use-unsaved-changes-guard';
-import useVariantActions, {
-  type VariantActionHandlers,
-} from './use-variant-actions';
+import useDimensionSwitcher from './use-dimension-switcher';
+import useUnsavedChangesGuard from './use-unsaved-changes-guard';
+import useVariantActions from './use-variant-actions';
 import useVariantForm from './use-variant-form';
 
-export type UseVariantEditorOptions<
+type Options<
   V extends VariantBase,
   D extends VariantDetailBase,
   T extends Record<string, unknown>,
@@ -29,30 +27,9 @@ export type UseVariantEditorOptions<
   variants: readonly V[];
   toFormValues: (detail: D | null) => T;
   dimension?: Dimension;
+  defaultValue?: string;
   publishable?: boolean;
   postValidateTransform?: (values: Partial<T>) => Record<string, unknown>;
-};
-
-export type VariantEditorState<
-  V extends VariantBase,
-  D extends VariantDetailBase,
-  T extends Record<string, unknown>,
-> = {
-  entityLabel: string;
-  dimension: Dimension;
-  variants: readonly V[];
-  publishable: boolean;
-  switcher: DimensionSwitcher<V, D>;
-  form: FormObject<Partial<T>>;
-  guard: UnsavedChangesGuard;
-  actions: VariantActionHandlers;
-  canTranslate: boolean;
-  isPublished: boolean;
-  isNewVariant: boolean;
-  isLastVariant: boolean;
-  switchTo: (value: string) => void;
-  save: () => Promise<boolean>;
-  remove: () => Promise<boolean>;
 };
 
 export default function useVariantEditor<
@@ -67,14 +44,15 @@ export default function useVariantEditor<
   variants,
   toFormValues,
   dimension: dimensionOverride,
+  defaultValue,
   publishable = true,
   postValidateTransform,
-}: UseVariantEditorOptions<V, D, T>): VariantEditorState<V, D, T> {
+}: Options<V, D, T>): VariantEditorState<V, D, T> {
   const { getParams, setParams, defaultDimension } = useVariantEditorContext();
   const dimension = dimensionOverride ?? defaultDimension;
   const firstVariant = variants[0];
   const initialValue =
-    dimension.defaultValue ??
+    defaultValue ??
     (firstVariant
       ? dimensionValue(firstVariant, dimension.key)
       : dimension.options[0]?.value);
@@ -88,6 +66,7 @@ export default function useVariantEditor<
 
   const switcher = useDimensionSwitcher<V, D>({
     dimension,
+    defaultValue,
     variants,
     value: isKnownValue && paramValue ? paramValue : initialValue,
     onValueChange: (next) => setParams({ [dimension.key]: next }),
@@ -108,8 +87,7 @@ export default function useVariantEditor<
 
   const savedValues = React.useMemo(
     () => toFormValues(currentDetail),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentDetail],
+    [toFormValues, currentDetail],
   );
 
   const form = useVariantForm<T>({
@@ -134,6 +112,18 @@ export default function useVariantEditor<
     onSave: () => form.handleSubmit(),
   });
 
+  const [isTranslating, setIsTranslating] = React.useState(false);
+
+  const translate = async (fields: string[]) => {
+    if (!sourceVariant) return null;
+    setIsTranslating(true);
+    try {
+      return await actions.translate(fields, sourceVariant);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const remove = async () => {
     if (!currentVariant) return false;
     const success = await actions.remove();
@@ -146,20 +136,30 @@ export default function useVariantEditor<
   };
 
   return {
-    entityLabel,
     dimension,
-    variants,
-    publishable,
-    switcher,
+    value,
+    isDefault: switcher.isDefault,
+    currentVariant,
+    currentDetail,
+    sourceVariant,
+    isLoadingDetail: switcher.isLoadingDetail,
+    hasDetailError: switcher.hasDetailError,
+    reloadDetail: switcher.reloadDetail,
+    getLabel: switcher.getLabel,
+    getChips: switcher.getChips,
     form,
     guard,
-    actions,
     canTranslate: Boolean(dimension.translatable) && sourceVariant !== null,
+    isTranslating,
     isPublished: currentVariant?.publishAt != null,
     isNewVariant: currentVariant === null,
     isLastVariant: variants.length === 1,
     switchTo: (next) => guard.guard(() => switcher.setValue(next)),
     save: () => form.handleSubmit(),
+    publish: actions.publish,
+    unpublish: actions.unpublish,
     remove,
+    translate,
+    invalidate: actions.invalidate,
   };
 }

@@ -2,18 +2,11 @@
 
 import { useRef, useState } from 'react';
 
+import type { UnsavedChangesGuard } from '../types';
+
 type Options = {
   hasUnsavedChanges: boolean;
   onSave: () => Promise<boolean>;
-};
-
-export type UnsavedChangesGuard = {
-  guard: (action: () => void) => void;
-  guardNavigate: (navigate: () => void) => Promise<boolean>;
-  hasUnsavedChanges: boolean;
-  hasPending: boolean;
-  handlePending: (save: boolean) => Promise<void>;
-  dismissPending: () => void;
 };
 
 export default function useUnsavedChangesGuard({

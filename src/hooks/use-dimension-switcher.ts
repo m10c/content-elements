@@ -13,16 +13,14 @@ import publishStatusChip from '../utils/publish-status-chip';
 
 type Options<V extends VariantBase> = {
   dimension: Dimension;
+  defaultValue: string | undefined;
   variants: readonly V[];
   value: string;
   onValueChange: (value: string) => void;
   publishable?: boolean;
 };
 
-export type DimensionSwitcher<
-  V extends VariantBase,
-  D extends VariantDetailBase,
-> = {
+type DimensionSwitcher<V extends VariantBase, D extends VariantDetailBase> = {
   dimension: Dimension;
   value: string;
   isDefault: boolean;
@@ -42,6 +40,7 @@ export default function useDimensionSwitcher<
   D extends VariantDetailBase,
 >({
   dimension,
+  defaultValue,
   variants,
   value,
   onValueChange,
@@ -53,13 +52,15 @@ export default function useDimensionSwitcher<
     ) ?? null;
 
   const currentVariant = findVariant(value);
-  const defaultVariant = findVariant(dimension.defaultValue);
+  const defaultVariant = findVariant(defaultValue);
   const otherVariants = variants.filter(
     (variant) => variant !== currentVariant,
   );
   const sourceVariant =
-    (defaultVariant !== currentVariant ? defaultVariant : null) ??
-    (otherVariants.length === 1 ? (otherVariants[0] ?? null) : null);
+    value === defaultValue
+      ? null
+      : (defaultVariant ??
+        (otherVariants.length === 1 ? (otherVariants[0] ?? null) : null));
 
   const detailRead = useApiRead<D>(currentVariant?.['@id'] ?? null, {
     staleWhileInvalidated: true,
@@ -74,7 +75,7 @@ export default function useDimensionSwitcher<
 
   const getChips = (target: string) => {
     const chips: DimensionChip[] = [];
-    if (target === dimension.defaultValue) {
+    if (target === defaultValue) {
       chips.push({ label: 'Default', color: 'default' });
     }
     const variant = findVariant(target);
@@ -86,7 +87,7 @@ export default function useDimensionSwitcher<
   return {
     dimension,
     value,
-    isDefault: value === dimension.defaultValue,
+    isDefault: value === defaultValue,
     currentVariant,
     sourceVariant,
     currentDetail,

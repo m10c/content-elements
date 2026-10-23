@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { PREVIEW_MESSAGE } from '../constants';
-import type { PreviewMessage } from '../types';
-import type { UseWebsitePageDataResult } from './use-website-page-data';
+import type { PreviewMessage, UseWebsitePageDataResult } from '../types';
 
 type UseWebsiteGlobalDataConfig = {
   /** The global's CMS page path, e.g. 'footer' or 'navigation'. */
