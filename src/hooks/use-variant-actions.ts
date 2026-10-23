@@ -21,7 +21,7 @@ type Options<V extends VariantBase> = {
   currentVariant: V | null;
 };
 
-export type VariantActionHandlers = {
+type VariantActionHandlers = {
   translate: (
     fields: string[],
     source: VariantBase,

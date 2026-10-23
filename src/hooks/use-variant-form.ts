@@ -15,9 +15,6 @@ type UseVariantFormOptions<T extends Record<string, unknown>> = {
   onSubmit: FormObjectSubmit<Partial<T>>;
 };
 
-const useIsomorphicLayoutEffect =
-  typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-
 export default function useVariantForm<T extends Record<string, unknown>>({
   savedValues,
   resetKey,
@@ -29,10 +26,11 @@ export default function useVariantForm<T extends Record<string, unknown>>({
     onSubmit,
   });
 
-  const { reset } = form;
-  useIsomorphicLayoutEffect(() => {
-    reset();
-  }, [resetKey]);
+  const [formKey, setFormKey] = React.useState(resetKey);
+  if (formKey !== resetKey) {
+    setFormKey(resetKey);
+    form.reset();
+  }
 
   return form;
 }
