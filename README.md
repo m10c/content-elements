@@ -40,46 +40,17 @@ Each block field can be rendered with a custom input by passing `renderers`
 default input is used.
 
 For an editor with its own layout (e.g. a content piece with a title, summary,
-and free-form blocks), use the pieces `PageEditor` is built from:
-
-- **`BlocksField`** — the block list on its own. `canEditBlockList` lets editors
-  reorder and delete blocks; add new ones with `AddBlockDialog` and
-  `createBlock`. `blockComponents` swaps a block type's default form for your
-  own component, and `header`/`footer` add fixed cards (e.g. a
-  `BlockCardFrame`) around the list.
-- **`PreviewLayout`** and **`LivePreview`** — the editor/preview split and the
-  streaming preview iframe, without the block form.
+and free-form blocks), `BlocksField`, `PreviewLayout`, and `LivePreview` (the
+pieces `PageEditor` is built from) can be composed directly.
 
 ## Localisation
 
-Localised content is an **identity** with **variants** — one per value of a
-**dimension**, e.g. a variant per locale.
+Localised content is an **identity** (e.g. a content piece) with one
+**variant** per value of a **dimension**, typically a variant per locale.
+Editors switch between variants, edit and save each one, publish or unpublish
+it, and start a new one by translating an existing variant.
 
-Mount `VariantEditorProvider` once at the admin app's root, passing in its
-toasts and router:
-
-```typescript
-import { type Dimension, VariantEditorProvider } from '@m10c/content-elements';
-
-const LOCALE_DIMENSION: Dimension = {
-  key: 'locale',
-  label: 'Language',
-  pluralLabel: 'Languages',
-  options: localeOptions,
-  translatable: true,
-};
-
-<VariantEditorProvider
-  callApi={callApi}
-  toast={toast}
-  push={(href) => router.push(href)}
-  getParams={getParams}
-  setParams={(next) => router.push(modifiedLink(next))}
-  defaultDimension={LOCALE_DIMENSION}
->
-```
-
-Then each screen calls `useVariantEditor` with the identity and its variants:
+`useVariantEditor` drives a variant editing screen:
 
 ```typescript
 import { useVariantEditor } from '@m10c/content-elements';
@@ -94,12 +65,12 @@ const editor = useVariantEditor({
 });
 ```
 
-It returns the selected variant (`editor.switcher`), a form that resets
-cleanly when switching between them (`editor.form`), an unsaved-changes guard,
-and save/publish/unpublish/delete/translate actions. The selected value is kept
-in the URL under the dimension's `key`. The layout is left to the screen;
-`DimensionSelect`, `ConfirmDialog`, and `UnsavedChangesDialog` cover the
-common parts.
+It returns the selected variant, a form that resets cleanly when switching,
+an unsaved-changes guard, and the save/publish/translate actions. The selected
+variant is kept in the URL. The layout is left to the screen, with
+`DimensionSelect`, `ConfirmDialog`, and `UnsavedChangesDialog` for the common
+parts. It relies on a `VariantEditorProvider` mounted once at the admin app's
+root, which supplies the API client, toasts, router, and default dimension.
 
 ## Website data fetching
 
