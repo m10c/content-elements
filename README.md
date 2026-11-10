@@ -39,6 +39,39 @@ Each block field can be rendered with a custom input by passing `renderers`
 (e.g. a rich-text or image-upload field for certain field kinds); otherwise a
 default input is used.
 
+For an editor with its own layout (e.g. a content piece with a title, summary,
+and free-form blocks), `BlocksField`, `PreviewLayout`, and `LivePreview` (the
+pieces `PageEditor` is built from) can be composed directly.
+
+## Localisation
+
+Localised content is an **identity** (e.g. a content piece) with one
+**variant** per value of a **dimension**, typically a variant per locale.
+Editors switch between variants, edit and save each one, publish or unpublish
+it, and start a new one by translating an existing variant.
+
+`useVariantEditor` drives a variant editing screen:
+
+```typescript
+import { useVariantEditor } from '@m10c/content-elements';
+
+const editor = useVariantEditor({
+  identityIri: content['@id'],
+  variantsPath: '/content-variants',
+  entityLabel: 'Content',
+  listPath: '/content',
+  variants,
+  toFormValues,
+});
+```
+
+It returns the selected variant, a form that resets cleanly when switching,
+an unsaved-changes guard, and the save/publish/translate actions. The selected
+variant is kept in the URL. The layout is left to the screen, with
+`DimensionSelect`, `ConfirmDialog`, and `UnsavedChangesDialog` for the common
+parts. It relies on a `VariantEditorProvider` mounted once at the admin app's
+root, which supplies the API client, toasts, router, and default dimension.
+
 ## Website data fetching
 
 Fetch the page on the server, pass it to `useWebsitePageData` as `initialData`,

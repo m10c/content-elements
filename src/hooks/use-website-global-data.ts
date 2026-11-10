@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import type {
-  PreviewMessage,
-  UseWebsitePageDataResult,
-} from './use-website-page-data';
+import { PREVIEW_MESSAGE } from '../constants';
+import type { PreviewMessage, UseWebsitePageDataResult } from '../types';
 
 type UseWebsiteGlobalDataConfig = {
   /** The global's CMS page path, e.g. 'footer' or 'navigation'. */
@@ -35,7 +33,7 @@ export default function useWebsiteGlobalData(
 
     function handleMessage(event: MessageEvent) {
       const message = event.data as PreviewMessage;
-      if (message?.type !== 'm10c-cms-preview') return;
+      if (message?.type !== PREVIEW_MESSAGE.content) return;
       const globalData = message.globals?.[config.path];
       if (globalData !== undefined) {
         setPreviewData(globalData as Record<string, unknown>);
@@ -43,7 +41,7 @@ export default function useWebsiteGlobalData(
     }
 
     window.addEventListener('message', handleMessage);
-    window.parent.postMessage({ type: 'm10c-cms-preview-ready' }, '*');
+    window.parent.postMessage({ type: PREVIEW_MESSAGE.ready }, '*');
 
     return () => window.removeEventListener('message', handleMessage);
   }, [isPreview, config.path]);

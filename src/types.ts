@@ -1,3 +1,7 @@
+import type { FormObject } from 'react-typed-form';
+
+import type { PREVIEW_MESSAGE } from './constants';
+
 export type SimpleFieldKind =
   | 'text'
   | 'textarea'
@@ -136,3 +140,120 @@ export type BlockFieldPreview = (value: string | null) => React.ReactNode;
 export type BlockFieldPreviews = Partial<
   Record<SimpleFieldKind | string, BlockFieldPreview>
 >;
+
+export type VariantBase = {
+  '@id': string;
+  publishAt?: string | null;
+  updatedAt?: string;
+};
+
+export type VariantDetailBase = {
+  '@id': string;
+  updatedAt?: string;
+};
+
+export type DimensionOption = {
+  value: string;
+  label: string;
+};
+
+export type DimensionChip = {
+  label: string;
+  color: 'default' | 'success' | 'warning' | 'info';
+};
+
+export type Dimension = {
+  key: string;
+  label: string;
+  pluralLabel: string;
+  options: readonly DimensionOption[];
+  translatable?: boolean;
+};
+
+export type Translations = Record<string, unknown>;
+
+export type UnsavedChangesGuard = {
+  guard: (action: () => void) => void;
+  guardNavigate: (navigate: () => void) => Promise<boolean>;
+  hasUnsavedChanges: boolean;
+  hasPending: boolean;
+  handlePending: (save: boolean) => Promise<void>;
+  dismissPending: () => void;
+};
+
+export type VariantEditorState<
+  V extends VariantBase,
+  D extends VariantDetailBase,
+  T extends Record<string, unknown>,
+> = {
+  dimension: Dimension;
+  value: string;
+  isDefault: boolean;
+  currentVariant: V | null;
+  currentDetail: D | null;
+  sourceVariant: V | null;
+  isLoadingDetail: boolean;
+  hasDetailError: boolean;
+  reloadDetail: () => void;
+  getLabel: (value: string) => string;
+  getChips: (value: string) => DimensionChip[];
+  form: FormObject<Partial<T>>;
+  guard: UnsavedChangesGuard;
+  canTranslate: boolean;
+  isTranslating: boolean;
+  isPublished: boolean;
+  isNewVariant: boolean;
+  isLastVariant: boolean;
+  switchTo: (value: string) => void;
+  save: () => Promise<boolean>;
+  publish: (publishAt: string) => Promise<boolean>;
+  unpublish: () => Promise<boolean>;
+  remove: () => Promise<boolean>;
+  translate: (fields: string[]) => Promise<Translations | null>;
+  invalidate: () => void;
+};
+
+export type VariantEditorConfig = {
+  callApi: CallApi;
+  toast: {
+    success: (message: string) => void;
+  };
+  push: (href: string) => void;
+  getParams: () => Record<string, string | undefined>;
+  setParams: (next: Record<string, string>) => void;
+  defaultDimension: Dimension;
+};
+
+export type CallApi = <R>(
+  path: string,
+  requestOptions?: {
+    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+    jsonBody?: unknown;
+  },
+  moreOptions?: { addSubmitError?: (field: string, error: string) => void },
+) => Promise<{ data: R } | undefined>;
+
+export type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
+
+export type PreviewMessage = {
+  type: typeof PREVIEW_MESSAGE.content;
+  content: Record<string, unknown>;
+  pagePath?: string;
+  globals?: Record<string, unknown>;
+};
+
+export type UseWebsitePageDataResult = {
+  data: Record<string, unknown>;
+  isPreview: boolean;
+  isLoading: boolean;
+};
+
+export type ListItem = Record<string, unknown>;
+
+export type BlockComponentProps = {
+  block: Block;
+  onChange: (data: Record<string, unknown>) => void;
+  errors?: BlockErrors;
+  errorPath: string;
+  headerActionContainer: HTMLElement | null;
+};
